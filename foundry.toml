@@ -50,7 +50,7 @@ fail_on_revert = false
 # Development profile for faster compilation during development
 [profile.dev]
 optimizer = false
-via_ir = false
+via_ir = true
 
 # CI profile for continuous integration
 [profile.ci]
