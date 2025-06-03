@@ -16,6 +16,4 @@ contract GnosisChainForwarderFactory is ForwarderFactory {
         // Verify we're on Gnosis Chain
         require(block.chainid == GNOSIS_CHAIN_ID, Forwarder.InvalidChain());
     }
-
-
 }

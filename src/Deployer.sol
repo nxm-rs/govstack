@@ -102,8 +102,6 @@ abstract contract AbstractDeployer {
             _validateDistributions(distributions);
         }
 
-
-
         // Generate unique salt
         bytes32 salt = _generateSalt();
         emit SaltGenerated(salt, block.chainid, blockhash(block.number - 1), address(this));
@@ -192,8 +190,6 @@ abstract contract AbstractDeployer {
             }
         }
     }
-
-
 }
 
 /**
@@ -288,7 +284,7 @@ contract TestableDeployer is AbstractDeployer {
         return true;
     }
 
-    function validateSplitterConfig(SplitterConfig memory /* splitterConfig */) external pure returns (bool valid) {
+    function validateSplitterConfig(SplitterConfig memory /* splitterConfig */ ) external pure returns (bool valid) {
         // Validation is now handled by TokenSplitter.updatePayees() to avoid redundant gas costs
         // Empty config is valid (no splitter will be deployed)
         return true;

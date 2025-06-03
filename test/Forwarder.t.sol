@@ -33,46 +33,27 @@ contract TestERC20 is ERC20 {
 /// @title TestForwarder
 /// @notice Concrete implementation of Forwarder for testing
 contract TestForwarder is Forwarder {
-    address public constant MOCK_BRIDGE =
-        0x1234567890123456789012345678901234567890;
+    address public constant MOCK_BRIDGE = 0x1234567890123456789012345678901234567890;
 
-    function _bridgeToken(
-        address token,
-        uint256 amount,
-        address recipient
-    ) internal override {
+    function _bridgeToken(address token, uint256 amount, address recipient) internal override {
         // Mock bridge call
-        (bool success, ) = MOCK_BRIDGE.call(
-            abi.encodeCall(this.bridgeToken, (token, amount, recipient))
-        );
+        (bool success,) = MOCK_BRIDGE.call(abi.encodeCall(this.bridgeToken, (token, amount, recipient)));
         require(success, BridgeFailed());
     }
 
-    function _bridgeNative(
-        uint256 amount,
-        address recipient
-    ) internal override {
+    function _bridgeNative(uint256 amount, address recipient) internal override {
         // Mock bridge call
-        (bool success, ) = MOCK_BRIDGE.call{value: amount}(
-            abi.encodeCall(this.bridgeNative, (amount, recipient))
-        );
+        (bool success,) = MOCK_BRIDGE.call{value: amount}(abi.encodeCall(this.bridgeNative, (amount, recipient)));
         require(success, BridgeFailed());
     }
 
     // Mock functions for the bridge calls
-    function bridgeToken(
-        address token,
-        uint256 amount,
-        address recipient
-    ) external pure returns (bool) {
+    function bridgeToken(address token, uint256 amount, address recipient) external pure returns (bool) {
         // This is just for abi.encodeCall, never actually called
         return true;
     }
 
-    function bridgeNative(
-        uint256 amount,
-        address recipient
-    ) external payable returns (bool) {
+    function bridgeNative(uint256 amount, address recipient) external payable returns (bool) {
         // This is just for abi.encodeCall, never actually called
         return true;
     }
@@ -88,11 +69,7 @@ contract ForwarderTest is Test {
     address mockBridge;
 
     // Events from Forwarder
-    event TokensForwarded(
-        address indexed token,
-        uint256 amount,
-        address indexed recipient
-    );
+    event TokensForwarded(address indexed token, uint256 amount, address indexed recipient);
     event NativeForwarded(uint256 amount, address indexed recipient);
 
     function setUp() public {
@@ -134,9 +111,7 @@ contract ForwarderTest is Test {
 
     function testFactoryDeploymentDirect() public {
         // Predict forwarder address using direct method
-        address predictedAddress = factory.predictForwarderAddressDirect(
-            mainnetRecipient
-        );
+        address predictedAddress = factory.predictForwarderAddressDirect(mainnetRecipient);
 
         // Deploy forwarder
         vm.expectEmit(true, true, true, true);
@@ -147,9 +122,7 @@ contract ForwarderTest is Test {
             keccak256(abi.encodePacked(mainnetRecipient))
         );
 
-        address payable forwarderAddress = factory.deployForwarderDirect(
-            mainnetRecipient
-        );
+        address payable forwarderAddress = factory.deployForwarderDirect(mainnetRecipient);
 
         // Verify addresses match
         assertEq(predictedAddress, forwarderAddress);
@@ -165,14 +138,10 @@ contract ForwarderTest is Test {
 
     function testFactoryDeploymentWithArgs() public {
         // Predict forwarder address using direct method
-        address predictedAddress = factory.predictForwarderAddressDirect(
-            mainnetRecipient
-        );
+        address predictedAddress = factory.predictForwarderAddressDirect(mainnetRecipient);
 
         // Deploy forwarder using direct method
-        address payable forwarderAddress = factory.deployForwarderDirect(
-            mainnetRecipient
-        );
+        address payable forwarderAddress = factory.deployForwarderDirect(mainnetRecipient);
 
         // Verify addresses match
         assertEq(predictedAddress, forwarderAddress);
@@ -188,9 +157,7 @@ contract ForwarderTest is Test {
 
     function testFactoryPreventsDuplicateDeployment() public {
         // Deploy first forwarder
-        address payable forwarder1 = factory.deployForwarderDirect(
-            mainnetRecipient
-        );
+        address payable forwarder1 = factory.deployForwarderDirect(mainnetRecipient);
 
         // Verify it exists
         assertTrue(forwarder1.code.length > 0);
@@ -202,15 +169,11 @@ contract ForwarderTest is Test {
 
     function testGetOrDeployForwarder() public {
         // First call should deploy
-        address payable forwarder1 = factory.getOrDeployForwarder(
-            mainnetRecipient
-        );
+        address payable forwarder1 = factory.getOrDeployForwarder(mainnetRecipient);
         assertTrue(forwarder1 != address(0));
 
         // Second call should return existing
-        address payable forwarder2 = factory.getOrDeployForwarder(
-            mainnetRecipient
-        );
+        address payable forwarder2 = factory.getOrDeployForwarder(mainnetRecipient);
         assertEq(forwarder1, forwarder2);
     }
 
@@ -224,20 +187,13 @@ contract ForwarderTest is Test {
         // Mock the bridge call to succeed
         vm.mockCall(
             mockBridge,
-            abi.encodeCall(
-                forwarder.bridgeToken,
-                (address(testToken), 1000e18, mainnetRecipient)
-            ),
+            abi.encodeCall(forwarder.bridgeToken, (address(testToken), 1000e18, mainnetRecipient)),
             abi.encode(true)
         );
 
         // Expect the bridge call
         vm.expectCall(
-            mockBridge,
-            abi.encodeCall(
-                forwarder.bridgeToken,
-                (address(testToken), 1000e18, mainnetRecipient)
-            )
+            mockBridge, abi.encodeCall(forwarder.bridgeToken, (address(testToken), 1000e18, mainnetRecipient))
         );
 
         // Forward tokens
@@ -257,21 +213,12 @@ contract ForwarderTest is Test {
         // Mock the bridge call to succeed
         vm.mockCall(
             mockBridge,
-            abi.encodeCall(
-                forwarder.bridgeToken,
-                (address(testToken), 500e18, mainnetRecipient)
-            ),
+            abi.encodeCall(forwarder.bridgeToken, (address(testToken), 500e18, mainnetRecipient)),
             abi.encode(true)
         );
 
         // Expect the bridge call
-        vm.expectCall(
-            mockBridge,
-            abi.encodeCall(
-                forwarder.bridgeToken,
-                (address(testToken), 500e18, mainnetRecipient)
-            )
-        );
+        vm.expectCall(mockBridge, abi.encodeCall(forwarder.bridgeToken, (address(testToken), 500e18, mainnetRecipient)));
 
         // Forward specific amount
         vm.expectEmit(true, true, false, true);
@@ -311,18 +258,11 @@ contract ForwarderTest is Test {
 
         // Mock the bridge call to succeed
         vm.mockCall(
-            mockBridge,
-            1 ether,
-            abi.encodeCall(forwarder.bridgeNative, (1 ether, mainnetRecipient)),
-            abi.encode(true)
+            mockBridge, 1 ether, abi.encodeCall(forwarder.bridgeNative, (1 ether, mainnetRecipient)), abi.encode(true)
         );
 
         // Expect the bridge call
-        vm.expectCall(
-            mockBridge,
-            1 ether,
-            abi.encodeCall(forwarder.bridgeNative, (1 ether, mainnetRecipient))
-        );
+        vm.expectCall(mockBridge, 1 ether, abi.encodeCall(forwarder.bridgeNative, (1 ether, mainnetRecipient)));
 
         // Forward native tokens
         vm.expectEmit(true, false, false, true);
@@ -342,22 +282,12 @@ contract ForwarderTest is Test {
         vm.mockCall(
             mockBridge,
             0.5 ether,
-            abi.encodeCall(
-                forwarder.bridgeNative,
-                (0.5 ether, mainnetRecipient)
-            ),
+            abi.encodeCall(forwarder.bridgeNative, (0.5 ether, mainnetRecipient)),
             abi.encode(true)
         );
 
         // Expect the bridge call
-        vm.expectCall(
-            mockBridge,
-            0.5 ether,
-            abi.encodeCall(
-                forwarder.bridgeNative,
-                (0.5 ether, mainnetRecipient)
-            )
-        );
+        vm.expectCall(mockBridge, 0.5 ether, abi.encodeCall(forwarder.bridgeNative, (0.5 ether, mainnetRecipient)));
 
         // Forward specific amount
         vm.expectEmit(true, false, false, true);
@@ -395,26 +325,17 @@ contract ForwarderTest is Test {
         // Mock the bridge calls to succeed for all tokens
         vm.mockCall(
             mockBridge,
-            abi.encodeCall(
-                forwarder.bridgeToken,
-                (address(testToken), 1000e18, mainnetRecipient)
-            ),
+            abi.encodeCall(forwarder.bridgeToken, (address(testToken), 1000e18, mainnetRecipient)),
             abi.encode(true)
         );
         vm.mockCall(
             mockBridge,
-            abi.encodeCall(
-                forwarder.bridgeToken,
-                (address(token2), 500e6, mainnetRecipient)
-            ),
+            abi.encodeCall(forwarder.bridgeToken, (address(token2), 500e6, mainnetRecipient)),
             abi.encode(true)
         );
         vm.mockCall(
             mockBridge,
-            abi.encodeCall(
-                forwarder.bridgeToken,
-                (address(token3), 250e8, mainnetRecipient)
-            ),
+            abi.encodeCall(forwarder.bridgeToken, (address(token3), 250e8, mainnetRecipient)),
             abi.encode(true)
         );
 
@@ -465,7 +386,7 @@ contract ForwarderTest is Test {
         // Test that forwarder can receive native tokens
         uint256 initialBalance = address(forwarder).balance;
 
-        (bool success, ) = address(forwarder).call{value: 1 ether}("");
+        (bool success,) = address(forwarder).call{value: 1 ether}("");
         assertTrue(success);
 
         assertEq(address(forwarder).balance, initialBalance + 1 ether);
@@ -476,9 +397,7 @@ contract ForwarderTest is Test {
         recipients[0] = mainnetRecipient;
         recipients[1] = vm.addr(99);
 
-        address payable[] memory forwarders = factory.batchDeployForwarders(
-            recipients
-        );
+        address payable[] memory forwarders = factory.batchDeployForwarders(recipients);
 
         assertEq(forwarders.length, 2);
         assertTrue(forwarders[0] != address(0));
@@ -488,20 +407,14 @@ contract ForwarderTest is Test {
 
     function testDeterministicAddresses() public {
         // Deploy forwarder for same recipient using direct method
-        address payable forwarder1 = factory.deployForwarderDirect(
-            mainnetRecipient
-        );
+        address payable forwarder1 = factory.deployForwarderDirect(mainnetRecipient);
 
         // Create new factory (simulating deployment on different chain)
         GnosisChainForwarderFactory factory2 = new GnosisChainForwarderFactory();
 
         // Predict address from both factories
-        address predicted1 = factory.predictForwarderAddressDirect(
-            mainnetRecipient
-        );
-        address predicted2 = factory2.predictForwarderAddressDirect(
-            mainnetRecipient
-        );
+        address predicted1 = factory.predictForwarderAddressDirect(mainnetRecipient);
+        address predicted2 = factory2.predictForwarderAddressDirect(mainnetRecipient);
 
         // The prediction should match the deployed address from the same factory
         assertEq(forwarder1, predicted1);
@@ -511,9 +424,7 @@ contract ForwarderTest is Test {
         assertTrue(predicted1 != predicted2);
 
         // Deploy from second factory and verify it matches its prediction
-        address payable forwarder2 = factory2.deployForwarderDirect(
-            mainnetRecipient
-        );
+        address payable forwarder2 = factory2.deployForwarderDirect(mainnetRecipient);
         assertEq(forwarder2, predicted2);
     }
 
@@ -527,10 +438,7 @@ contract ForwarderTest is Test {
         // Mock the bridge call to revert
         vm.mockCallRevert(
             mockBridge,
-            abi.encodeCall(
-                forwarder.bridgeToken,
-                (address(testToken), 1000e18, mainnetRecipient)
-            ),
+            abi.encodeCall(forwarder.bridgeToken, (address(testToken), 1000e18, mainnetRecipient)),
             abi.encodeWithSelector(Forwarder.BridgeFailed.selector)
         );
 
@@ -576,9 +484,7 @@ contract GnosisChainForwarderTest is Test {
         factory = new GnosisChainForwarderFactory();
 
         // Deploy forwarder instance
-        address payable forwarderAddr = factory.deployForwarderDirect(
-            mainnetRecipient
-        );
+        address payable forwarderAddr = factory.deployForwarderDirect(mainnetRecipient);
         forwarder = GnosisChainForwarder(forwarderAddr);
 
         // Deploy test token
@@ -651,7 +557,7 @@ contract GnosisChainForwarderTest is Test {
     function testForwarderCanReceiveNative() public {
         uint256 initialBalance = address(forwarder).balance;
 
-        (bool success, ) = address(forwarder).call{value: 1 ether}("");
+        (bool success,) = address(forwarder).call{value: 1 ether}("");
         assertTrue(success);
 
         assertEq(address(forwarder).balance, initialBalance + 1 ether);

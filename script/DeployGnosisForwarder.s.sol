@@ -50,9 +50,7 @@ contract DeployGnosisForwarder is Script {
     /// @notice Deploy a specific forwarder instance for a mainnet recipient
     /// @param factoryAddress The deployed factory address
     /// @param mainnetRecipient The mainnet address that will receive tokens
-    function deployForwarderInstance(address factoryAddress, address mainnetRecipient)
-        external
-    {
+    function deployForwarderInstance(address factoryAddress, address mainnetRecipient) external {
         require(block.chainid == GNOSIS_CHAIN_ID, "Must deploy on Gnosis Chain");
         require(factoryAddress != address(0), "Invalid factory");
         require(mainnetRecipient != address(0), "Invalid recipient");
@@ -91,10 +89,7 @@ contract DeployGnosisForwarder is Script {
     /// @notice Deploy multiple forwarder instances for different recipients
     /// @param factoryAddress The deployed factory address
     /// @param mainnetRecipients Array of mainnet addresses that will receive tokens
-    function deployMultipleForwarders(
-        address factoryAddress,
-        address[] calldata mainnetRecipients
-    ) external {
+    function deployMultipleForwarders(address factoryAddress, address[] calldata mainnetRecipients) external {
         require(block.chainid == GNOSIS_CHAIN_ID, "Must deploy on Gnosis Chain");
         require(factoryAddress != address(0), "Invalid factory");
         require(mainnetRecipients.length > 0, "No recipients provided");
@@ -160,7 +155,10 @@ contract DeployGnosisForwarder is Script {
         // Verify implementation
         GnosisChainForwarder impl = GnosisChainForwarder(payable(implementationAddress));
         require(block.chainid == GNOSIS_CHAIN_ID, "Wrong chain for implementation");
-        require(address(impl.OMNIBRIDGE()) != address(0) && address(impl.XDAI_BRIDGE()) != address(0), "Bridge not configured");
+        require(
+            address(impl.OMNIBRIDGE()) != address(0) && address(impl.XDAI_BRIDGE()) != address(0),
+            "Bridge not configured"
+        );
         console.log("[OK] Implementation verified");
 
         // Test prediction function works
@@ -170,6 +168,4 @@ contract DeployGnosisForwarder is Script {
 
         console.log("[OK] All verifications passed");
     }
-
-
 }

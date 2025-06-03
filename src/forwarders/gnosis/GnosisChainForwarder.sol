@@ -13,13 +13,11 @@ contract GnosisChainForwarder is Forwarder {
 
     /// @notice The Omnibridge contract address on Gnosis Chain
     /// @dev This is the canonical bridge for ERC20 tokens
-    IOmnibridge public constant OMNIBRIDGE =
-        IOmnibridge(0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d);
+    IOmnibridge public constant OMNIBRIDGE = IOmnibridge(0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d);
 
     /// @notice The xDAI bridge contract address on Gnosis Chain
     /// @dev This is used for native token bridging (xDAI)
-    IxDaiBridge public constant XDAI_BRIDGE =
-        IxDaiBridge(0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6);
+    IxDaiBridge public constant XDAI_BRIDGE = IxDaiBridge(0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6);
 
     /// @notice Gnosis Chain ID
     uint256 public constant GNOSIS_CHAIN_ID = 100;
@@ -49,11 +47,7 @@ contract GnosisChainForwarder is Forwarder {
     /// @param token The token address to bridge
     /// @param amount The amount to bridge
     /// @param recipient The recipient address on mainnet
-    function _bridgeToken(
-        address token,
-        uint256 amount,
-        address recipient
-    ) internal override {
+    function _bridgeToken(address token, uint256 amount, address recipient) internal override {
         // Validate that the token is a legitimate bridged token
         require(_isValidBridgedToken(token), InvalidToken());
 
@@ -72,10 +66,7 @@ contract GnosisChainForwarder is Forwarder {
     /// @dev Implements the abstract _bridgeNative function
     /// @param amount The amount to bridge
     /// @param recipient The recipient address on mainnet
-    function _bridgeNative(
-        uint256 amount,
-        address recipient
-    ) internal override {
+    function _bridgeNative(uint256 amount, address recipient) internal override {
         // Bridge native tokens via xDAI bridge using relayTokens
         XDAI_BRIDGE.relayTokens{value: amount}(recipient);
     }
@@ -86,17 +77,13 @@ contract GnosisChainForwarder is Forwarder {
     /// @return True if the token is valid for bridging
     function _isValidBridgedToken(address token) internal view returns (bool) {
         // Try to call the bridged token interface functions
-        try IBridgedToken(token).isBridge(address(OMNIBRIDGE)) returns (
-            bool isBridgeToken
-        ) {
+        try IBridgedToken(token).isBridge(address(OMNIBRIDGE)) returns (bool isBridgeToken) {
             if (!isBridgeToken) {
                 return false;
             }
 
             // Check if the bridge contract is the correct Omnibridge
-            try IBridgedToken(token).bridgeContract() returns (
-                address bridgeContract
-            ) {
+            try IBridgedToken(token).bridgeContract() returns (address bridgeContract) {
                 return bridgeContract == address(OMNIBRIDGE);
             } catch {
                 return false;
@@ -104,17 +91,13 @@ contract GnosisChainForwarder is Forwarder {
         } catch {
             // If the token doesn't implement the bridged token interface,
             // check if it has a foreign token mapping (indicating it's bridged)
-            try OMNIBRIDGE.foreignTokenAddress(token) returns (
-                address foreignToken
-            ) {
+            try OMNIBRIDGE.foreignTokenAddress(token) returns (address foreignToken) {
                 return foreignToken != address(0);
             } catch {
                 return false;
             }
         }
     }
-
-
 
     /// @notice Check if a token is valid for bridging (external view function)
     /// @param token The token address to validate
@@ -123,16 +106,11 @@ contract GnosisChainForwarder is Forwarder {
         return _isValidBridgedToken(token);
     }
 
-
-
     /// @notice Emergency function to recover tokens if bridge fails
     /// @dev Only callable by the mainnet recipient (acts as admin)
     /// @param token The token to recover
     /// @param to The address to send recovered tokens to
-    function emergencyRecover(
-        address token,
-        address to
-    ) external onlyInitialized {
+    function emergencyRecover(address token, address to) external onlyInitialized {
         require(msg.sender == mainnetRecipient, "Only recipient can recover");
         require(to != address(0), "Invalid recovery address");
 
