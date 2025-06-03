@@ -144,11 +144,14 @@ abstract contract AbstractDeployer {
         uint256 totalDistributed = 0;
 
         // Distribute tokens to specified addresses
-        for (uint256 i = 0; i < distributions.length; i++) {
+        for (uint256 i = 0; i < distributions.length;) {
             TokenDistribution memory dist = distributions[i];
             token.mint(dist.recipient, dist.amount);
             totalDistributed += dist.amount;
             emit TokensDistributed(addresses.token, dist.recipient, dist.amount);
+            unchecked {
+                ++i;
+            }
         }
 
         // Transfer token ownership to the final owner
@@ -180,13 +183,19 @@ abstract contract AbstractDeployer {
     function _validateDistributions(TokenDistribution[] memory distributions) internal pure {
         require(distributions.length <= 100, TooManyDistributions());
 
-        for (uint256 i = 0; i < distributions.length; i++) {
+        for (uint256 i = 0; i < distributions.length;) {
             require(distributions[i].recipient != address(0), RecipientZeroAddress());
             require(distributions[i].amount > 0, AmountMustBeGreaterThanZero());
 
             // Check for duplicate recipients
-            for (uint256 j = i + 1; j < distributions.length; j++) {
+            for (uint256 j = i + 1; j < distributions.length;) {
                 require(distributions[i].recipient != distributions[j].recipient, DuplicateRecipient());
+                unchecked {
+                    ++j;
+                }
+            }
+            unchecked {
+                ++i;
             }
         }
     }
@@ -271,13 +280,19 @@ contract TestableDeployer is AbstractDeployer {
     function validateDistributions(TokenDistribution[] memory distributions) external pure returns (bool valid) {
         require(distributions.length <= 100, TooManyDistributions());
 
-        for (uint256 i = 0; i < distributions.length; i++) {
+        for (uint256 i = 0; i < distributions.length;) {
             require(distributions[i].recipient != address(0), RecipientZeroAddress());
             require(distributions[i].amount > 0, AmountMustBeGreaterThanZero());
 
             // Check for duplicate recipients
-            for (uint256 j = i + 1; j < distributions.length; j++) {
+            for (uint256 j = i + 1; j < distributions.length;) {
                 require(distributions[i].recipient != distributions[j].recipient, DuplicateRecipient());
+                unchecked {
+                    ++j;
+                }
+            }
+            unchecked {
+                ++i;
             }
         }
 
@@ -295,8 +310,11 @@ contract TestableDeployer is AbstractDeployer {
         pure
         returns (uint256 total)
     {
-        for (uint256 i = 0; i < distributions.length; i++) {
+        for (uint256 i = 0; i < distributions.length;) {
             total += distributions[i].amount;
+            unchecked {
+                ++i;
+            }
         }
     }
 }

@@ -67,12 +67,12 @@ contract DeployGnosisForwarder is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Predict the forwarder address using the direct method
-        address predictedAddress = factory.predictForwarderAddressDirect(mainnetRecipient);
+        // Predict the forwarder address using the standard method
+        address predictedAddress = factory.predictForwarderAddress(mainnetRecipient);
         console.log("Predicted forwarder address:", predictedAddress);
 
-        // Deploy the forwarder using the direct method
-        address forwarderAddress = factory.deployForwarderDirect(mainnetRecipient);
+        // Deploy the forwarder using the standard method
+        address forwarderAddress = factory.deployForwarder(mainnetRecipient);
         console.log("Deployed forwarder address:", forwarderAddress);
 
         // Verify the addresses match
@@ -119,7 +119,7 @@ contract DeployGnosisForwarder is Script {
             }
 
             // Deploy the forwarder
-            address forwarderAddress = factory.deployForwarderDirect(recipient);
+            address forwarderAddress = factory.deployForwarder(recipient);
             console.log("Deployed forwarder at:", forwarderAddress);
         }
 
@@ -162,7 +162,7 @@ contract DeployGnosisForwarder is Script {
         console.log("[OK] Implementation verified");
 
         // Test prediction function works
-        address testPrediction = factory.predictForwarderAddressDirect(address(0x1));
+        address testPrediction = factory.predictForwarderAddress(address(0x1));
         require(testPrediction != address(0), "Factory prediction failed");
         console.log("[OK] Factory verified");
 

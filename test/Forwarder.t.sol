@@ -109,62 +109,16 @@ contract ForwarderTest is Test {
         forwarder.initialize(address(0));
     }
 
-    function testFactoryDeploymentDirect() public {
-        // Predict forwarder address using direct method
-        address predictedAddress = factory.predictForwarderAddressDirect(mainnetRecipient);
-
-        // Deploy forwarder
-        vm.expectEmit(true, true, true, true);
-        emit ForwarderFactory.ForwarderDeployed(
-            factory.getImplementation(),
-            mainnetRecipient,
-            predictedAddress,
-            keccak256(abi.encodePacked(mainnetRecipient))
-        );
-
-        address payable forwarderAddress = factory.deployForwarderDirect(mainnetRecipient);
-
-        // Verify addresses match
-        assertEq(predictedAddress, forwarderAddress);
-
-        // Verify forwarder exists by checking if code exists at predicted address
-        assertTrue(forwarderAddress.code.length > 0);
-
-        // Verify forwarder is initialized
-        Forwarder forwarder = Forwarder(forwarderAddress);
-        assertTrue(forwarder.initialized());
-        assertEq(forwarder.mainnetRecipient(), mainnetRecipient);
-    }
-
-    function testFactoryDeploymentWithArgs() public {
-        // Predict forwarder address using direct method
-        address predictedAddress = factory.predictForwarderAddressDirect(mainnetRecipient);
-
-        // Deploy forwarder using direct method
-        address payable forwarderAddress = factory.deployForwarderDirect(mainnetRecipient);
-
-        // Verify addresses match
-        assertEq(predictedAddress, forwarderAddress);
-
-        // Verify forwarder exists
-        assertTrue(factory.forwarderExists(mainnetRecipient));
-
-        // Verify forwarder is initialized
-        Forwarder forwarder = Forwarder(forwarderAddress);
-        assertTrue(forwarder.initialized());
-        assertEq(forwarder.mainnetRecipient(), mainnetRecipient);
-    }
-
     function testFactoryPreventsDuplicateDeployment() public {
         // Deploy first forwarder
-        address payable forwarder1 = factory.deployForwarderDirect(mainnetRecipient);
+        address payable forwarder1 = factory.deployForwarder(mainnetRecipient);
 
         // Verify it exists
         assertTrue(forwarder1.code.length > 0);
 
         // Try to deploy again - should revert with DeploymentFailed since the address already has code
         vm.expectRevert(ForwarderFactory.DeploymentFailed.selector);
-        factory.deployForwarderDirect(mainnetRecipient);
+        factory.deployForwarder(mainnetRecipient);
     }
 
     function testGetOrDeployForwarder() public {
@@ -406,15 +360,15 @@ contract ForwarderTest is Test {
     }
 
     function testDeterministicAddresses() public {
-        // Deploy forwarder for same recipient using direct method
-        address payable forwarder1 = factory.deployForwarderDirect(mainnetRecipient);
+        // Deploy forwarder for same recipient
+        address payable forwarder1 = factory.deployForwarder(mainnetRecipient);
 
         // Create new factory (simulating deployment on different chain)
         GnosisChainForwarderFactory factory2 = new GnosisChainForwarderFactory();
 
         // Predict address from both factories
-        address predicted1 = factory.predictForwarderAddressDirect(mainnetRecipient);
-        address predicted2 = factory2.predictForwarderAddressDirect(mainnetRecipient);
+        address predicted1 = factory.predictForwarderAddress(mainnetRecipient);
+        address predicted2 = factory2.predictForwarderAddress(mainnetRecipient);
 
         // The prediction should match the deployed address from the same factory
         assertEq(forwarder1, predicted1);
@@ -424,7 +378,7 @@ contract ForwarderTest is Test {
         assertTrue(predicted1 != predicted2);
 
         // Deploy from second factory and verify it matches its prediction
-        address payable forwarder2 = factory2.deployForwarderDirect(mainnetRecipient);
+        address payable forwarder2 = factory2.deployForwarder(mainnetRecipient);
         assertEq(forwarder2, predicted2);
     }
 
@@ -484,7 +438,7 @@ contract GnosisChainForwarderTest is Test {
         factory = new GnosisChainForwarderFactory();
 
         // Deploy forwarder instance
-        address payable forwarderAddr = factory.deployForwarderDirect(mainnetRecipient);
+        address payable forwarderAddr = factory.deployForwarder(mainnetRecipient);
         forwarder = GnosisChainForwarder(forwarderAddr);
 
         // Deploy test token

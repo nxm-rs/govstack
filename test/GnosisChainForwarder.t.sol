@@ -64,7 +64,7 @@ contract GnosisChainForwarderForkTest is Test {
         factory = new GnosisChainForwarderFactory();
 
         // Deploy forwarder instance
-        address payable forwarderAddr = factory.deployForwarderDirect(mainnetRecipient);
+        address payable forwarderAddr = factory.deployForwarder(mainnetRecipient);
         forwarder = GnosisChainForwarder(forwarderAddr);
 
         // Fund user account
@@ -203,15 +203,19 @@ contract GnosisChainForwarderForkTest is Test {
         assertEq(address(forwarder.OMNIBRIDGE()), address(forwarder.OMNIBRIDGE()));
     }
 
-    function testFactoryDeployment() public {
+    function testDeterministicDeploymentAndPrediction() public {
         address recipient1 = vm.addr(10);
         address recipient2 = vm.addr(11);
 
-        // Deploy first forwarder
-        address forwarder1 = factory.deployForwarderDirect(recipient1);
+        // Predict and deploy first forwarder
+        address predicted1 = factory.predictForwarderAddress(recipient1);
+        address forwarder1 = factory.deployForwarder(recipient1);
+        assertEq(predicted1, forwarder1);
 
-        // Deploy second forwarder
-        address forwarder2 = factory.deployForwarderDirect(recipient2);
+        // Predict and deploy second forwarder
+        address predicted2 = factory.predictForwarderAddress(recipient2);
+        address forwarder2 = factory.deployForwarder(recipient2);
+        assertEq(predicted2, forwarder2);
 
         // Addresses should be different
         assertTrue(forwarder1 != forwarder2);
@@ -219,46 +223,23 @@ contract GnosisChainForwarderForkTest is Test {
         // Both should be properly initialized
         assertEq(GnosisChainForwarder(payable(forwarder1)).mainnetRecipient(), recipient1);
         assertEq(GnosisChainForwarder(payable(forwarder2)).mainnetRecipient(), recipient2);
-    }
 
-    function testFactoryPreventsDuplicateDeployment() public {
-        address recipient = vm.addr(20);
+        // Duplicate deployment returns the same address
+        address forwarder1Dup = factory.getOrDeployForwarder(recipient1);
+        assertEq(forwarder1, forwarder1Dup);
 
-        // Deploy first forwarder
-        address forwarder1 = factory.deployForwarderDirect(recipient);
-
-        // Try to deploy again - this should succeed and return the same address
-        // But due to how LibClone works, it might revert if already deployed
-        // Let's use the getOrDeployForwarder method instead
-        address forwarder2 = factory.getOrDeployForwarder(recipient);
-
-        assertEq(forwarder1, forwarder2);
-    }
-
-    function testPredictForwarderAddress() public {
-        address recipient = vm.addr(30);
-
-        // Predict address
-        address predicted = factory.predictForwarderAddressDirect(recipient);
-
-        // Deploy forwarder
-        address deployed = factory.deployForwarderDirect(recipient);
-
-        // Should match prediction
-        assertEq(predicted, deployed);
-    }
-
-    function testBatchDeployForwarders() public {
+        // Batch deploy
         address[] memory recipients = new address[](3);
         recipients[0] = vm.addr(40);
         recipients[1] = vm.addr(41);
         recipients[2] = vm.addr(42);
 
-        // Deploy multiple forwarders
         for (uint256 i = 0; i < recipients.length; i++) {
-            address forwarderAddr = factory.deployForwarderDirect(recipients[i]);
-            GnosisChainForwarder fw = GnosisChainForwarder(payable(forwarderAddr));
+            address predicted = factory.predictForwarderAddress(recipients[i]);
+            address deployed = factory.deployForwarder(recipients[i]);
+            assertEq(predicted, deployed);
 
+            GnosisChainForwarder fw = GnosisChainForwarder(payable(deployed));
             assertTrue(fw.initialized());
             assertEq(fw.mainnetRecipient(), recipients[i]);
             assertEq(block.chainid, GNOSIS_CHAIN_ID);

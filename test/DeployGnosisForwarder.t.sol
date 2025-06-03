@@ -21,7 +21,7 @@ contract DeployGnosisForwarderTest is Test {
         factory = new GnosisChainForwarderFactory();
     }
 
-    function testDeploymentScriptOnGnosisChain() public {
+    function testDeploymentScriptOnGnosisChain() public view {
         // Verify we're on the correct chain
         assertEq(block.chainid, GNOSIS_CHAIN_ID);
 
@@ -34,14 +34,14 @@ contract DeployGnosisForwarderTest is Test {
     }
 
     function testDeployForwarderInstance() public {
-        // Test the deployForwarderInstance function
+        // Test deterministic deployment and initialization
         address testRecipient = address(0x1234567890123456789012345678901234567890);
 
         // Predict the forwarder address
-        address predictedAddress = factory.predictForwarderAddressDirect(testRecipient);
+        address predictedAddress = factory.predictForwarderAddress(testRecipient);
 
         // Deploy the forwarder
-        address deployedAddress = factory.deployForwarderDirect(testRecipient);
+        address deployedAddress = factory.deployForwarder(testRecipient);
 
         // Verify the addresses match
         assertEq(predictedAddress, deployedAddress);
@@ -59,15 +59,17 @@ contract DeployGnosisForwarderTest is Test {
         recipients[1] = vm.addr(11);
         recipients[2] = vm.addr(12);
 
-        // Deploy multiple forwarders
+        // Deploy multiple forwarders and verify deterministic deployment and initialization
         for (uint256 i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
 
-            // Deploy the forwarder
-            address forwarderAddress = factory.deployForwarderDirect(recipient);
+            // Predict and deploy
+            address predicted = factory.predictForwarderAddress(recipient);
+            address deployed = factory.deployForwarder(recipient);
 
-            // Verify deployment
-            GnosisChainForwarder forwarder = GnosisChainForwarder(payable(forwarderAddress));
+            assertEq(predicted, deployed);
+
+            GnosisChainForwarder forwarder = GnosisChainForwarder(payable(deployed));
             assertTrue(forwarder.initialized());
             assertEq(forwarder.mainnetRecipient(), recipient);
         }
@@ -93,15 +95,15 @@ contract DeployGnosisForwarderTest is Test {
         // Test that predictions are consistent within the same factory instance
         address testRecipient = vm.addr(99);
 
-        address predicted1 = factory.predictForwarderAddressDirect(testRecipient);
-        address predicted2 = factory.predictForwarderAddressDirect(testRecipient);
+        address predicted1 = factory.predictForwarderAddress(testRecipient);
+        address predicted2 = factory.predictForwarderAddress(testRecipient);
 
         // Predictions should be the same for the same recipient and factory
         assertEq(predicted1, predicted2, "Same factory predictions should match");
 
         // Now test that different factories have different implementations
         GnosisChainForwarderFactory factory2 = new GnosisChainForwarderFactory();
-        address predicted3 = factory2.predictForwarderAddressDirect(testRecipient);
+        address predicted3 = factory2.predictForwarderAddress(testRecipient);
 
         // Different factories will have different implementations, so different predictions
         assertTrue(predicted1 != predicted3, "Different factories should have different predictions");
@@ -118,7 +120,7 @@ contract DeployGnosisForwarderTest is Test {
         newForwarder.initialize(mainnetRecipient);
     }
 
-    function testGetDeploymentAddresses() public {
+    function testGetDeploymentAddresses() public view {
         // Test the getDeploymentAddresses function
         (address implementation, address factoryAddr) = deployer.getDeploymentAddresses();
 
@@ -132,7 +134,7 @@ contract DeployGnosisForwarderTest is Test {
         address recipient = vm.addr(50);
 
         // Deploy first forwarder
-        address forwarder1 = factory.deployForwarderDirect(recipient);
+        address forwarder1 = factory.deployForwarder(recipient);
 
         // Use getOrDeployForwarder for second attempt - this handles duplicates gracefully
         address forwarder2 = factory.getOrDeployForwarder(recipient);
@@ -152,7 +154,7 @@ contract DeployGnosisForwarderTest is Test {
         address recipient = vm.addr(60);
 
         // Deploy via factory
-        address forwarderAddr = factory.deployForwarderDirect(recipient);
+        address forwarderAddr = factory.deployForwarder(recipient);
         GnosisChainForwarder forwarder = GnosisChainForwarder(payable(forwarderAddr));
 
         // Should be initialized
@@ -166,7 +168,7 @@ contract DeployGnosisForwarderTest is Test {
 
     function testBridgeConfigurationInDeployment() public {
         // Deploy forwarder and check bridge configuration
-        address forwarderAddr = factory.deployForwarderDirect(mainnetRecipient);
+        address forwarderAddr = factory.deployForwarder(mainnetRecipient);
         GnosisChainForwarder forwarder = GnosisChainForwarder(payable(forwarderAddr));
 
         assertTrue(address(forwarder.OMNIBRIDGE()) != address(0) && address(forwarder.XDAI_BRIDGE()) != address(0));

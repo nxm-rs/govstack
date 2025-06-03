@@ -32,17 +32,14 @@ abstract contract ForwarderFactory {
     /// @notice Deploy a new forwarder contract deterministically using LibClone
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return forwarder The address of the deployed forwarder contract
-    function deployForwarder(address mainnetRecipient) external returns (address payable forwarder) {
+    function deployForwarder(address mainnetRecipient) public returns (address payable forwarder) {
         require(mainnetRecipient != address(0), "Invalid recipient");
 
         // Generate deterministic salt based on mainnet recipient
         bytes32 salt = keccak256(abi.encodePacked(mainnetRecipient));
 
-        // Prepare initialization data
-        bytes memory initData = abi.encodeCall(IForwarder.initialize, (mainnetRecipient));
-
-        // Deploy using LibClone's cloneDeterministic with immutable args
-        forwarder = payable(LibClone.cloneDeterministic(implementation, initData, salt));
+        // Deploy using LibClone's cloneDeterministic (minimal proxy)
+        forwarder = payable(LibClone.cloneDeterministic(implementation, salt));
 
         require(forwarder != address(0), DeploymentFailed());
 
@@ -55,18 +52,16 @@ abstract contract ForwarderFactory {
     /// @notice Predict the address of a forwarder contract
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return The predicted address of the forwarder contract
-    function predictForwarderAddress(address mainnetRecipient) external view returns (address) {
+    function predictForwarderAddress(address mainnetRecipient) public view returns (address) {
         bytes32 salt = keccak256(abi.encodePacked(mainnetRecipient));
-        bytes memory initData = abi.encodeCall(IForwarder.initialize, (mainnetRecipient));
-
-        return LibClone.predictDeterministicAddress(implementation, initData, salt, address(this));
+        return LibClone.predictDeterministicAddress(implementation, salt, address(this));
     }
 
     /// @notice Check if a forwarder exists for the given recipient
     /// @param mainnetRecipient The mainnet address
     /// @return True if the forwarder exists (has code deployed)
     function forwarderExists(address mainnetRecipient) external view returns (bool) {
-        address predicted = this.predictForwarderAddressDirect(mainnetRecipient);
+        address predicted = this.predictForwarderAddress(mainnetRecipient);
         return predicted.code.length > 0;
     }
 
@@ -74,11 +69,11 @@ abstract contract ForwarderFactory {
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return forwarder The address of the forwarder contract
     function getOrDeployForwarder(address mainnetRecipient) external returns (address payable forwarder) {
-        forwarder = payable(this.predictForwarderAddressDirect(mainnetRecipient));
+        forwarder = payable(this.predictForwarderAddress(mainnetRecipient));
 
         // Check if forwarder already exists by checking if it has code
         if (forwarder.code.length == 0) {
-            forwarder = this.deployForwarderDirect(mainnetRecipient);
+            forwarder = this.deployForwarder(mainnetRecipient);
         }
     }
 
@@ -94,37 +89,8 @@ abstract contract ForwarderFactory {
         forwarderAddresses = new address payable[](mainnetRecipients.length);
 
         for (uint256 i = 0; i < mainnetRecipients.length; i++) {
-            forwarderAddresses[i] = this.deployForwarderDirect(mainnetRecipients[i]);
+            forwarderAddresses[i] = this.deployForwarder(mainnetRecipients[i]);
         }
-    }
-
-    /// @notice Deploy forwarder using CREATE2 directly (alternative method)
-    /// @param mainnetRecipient The mainnet address that will receive tokens
-    /// @return forwarder The address of the deployed forwarder contract
-    function deployForwarderDirect(address mainnetRecipient) external returns (address payable forwarder) {
-        require(mainnetRecipient != address(0), "Invalid recipient");
-
-        // Generate deterministic salt based on mainnet recipient
-        bytes32 salt = keccak256(abi.encodePacked(mainnetRecipient));
-
-        // Deploy using LibClone's cloneDeterministic (simple clone)
-        forwarder = payable(LibClone.cloneDeterministic(implementation, salt));
-
-        require(forwarder != address(0), DeploymentFailed());
-
-        // Initialize the deployed forwarder
-        IForwarder(forwarder).initialize(mainnetRecipient);
-
-        emit ForwarderDeployed(implementation, mainnetRecipient, forwarder, salt);
-    }
-
-    /// @notice Predict the address of a forwarder contract (direct method)
-    /// @param mainnetRecipient The mainnet address that will receive tokens
-    /// @return The predicted address of the forwarder contract
-    function predictForwarderAddressDirect(address mainnetRecipient) external view returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(mainnetRecipient));
-
-        return LibClone.predictDeterministicAddress(implementation, salt, address(this));
     }
 
     /// @notice Get the implementation contract address
