@@ -32,10 +32,15 @@ jobs:
           forge fmt --check
         id: fmt
 
-      - name: Run Forge build
+      - name: Run Forge production build
         run: |
-          forge build --sizes
-        id: build
+          FOUNDRY_PROFILE=production forge build --skip test --skip script
+        id: build-production
+
+      - name: Run Forge development build
+        run: |
+          FOUNDRY_PROFILE=dev forge build
+        id: build-dev
 
       - name: Run Forge tests
         run: |
