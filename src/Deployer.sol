@@ -35,6 +35,7 @@ abstract contract AbstractDeployer {
     error TotalSharesMustEqual10000();
     error EmptyCalldata();
     error InvalidCalldataLength();
+
     struct TokenConfig {
         string name;
         string symbol;
@@ -64,25 +65,10 @@ abstract contract AbstractDeployer {
         address splitter;
     }
 
-    event TokenDeployed(
-        address indexed tokenAddress,
-        string name,
-        string symbol
-    );
-    event GovernorDeployed(
-        address indexed governorAddress,
-        string name,
-        address indexed token
-    );
-    event SplitterDeployed(
-        address indexed splitterAddress,
-        address indexed governor
-    );
-    event TokensDistributed(
-        address indexed tokenAddress,
-        address indexed recipient,
-        uint256 amount
-    );
+    event TokenDeployed(address indexed tokenAddress, string name, string symbol);
+    event GovernorDeployed(address indexed governorAddress, string name, address indexed token);
+    event SplitterDeployed(address indexed splitterAddress, address indexed governor);
+    event TokensDistributed(address indexed tokenAddress, address indexed recipient, uint256 amount);
     event DeploymentCompleted(
         address indexed token,
         address indexed governor,
@@ -92,12 +78,7 @@ abstract contract AbstractDeployer {
         bytes32 salt
     );
     event DeployerSelfDestructed(DeploymentAddresses addresses);
-    event SaltGenerated(
-        bytes32 indexed salt,
-        uint256 chainId,
-        bytes32 blockHash,
-        address deployer
-    );
+    event SaltGenerated(bytes32 indexed salt, uint256 chainId, bytes32 blockHash, address deployer);
 
     /**
      * @dev Deploys Token, Governor, and TokenSplitter contracts with initial configuration.
@@ -134,29 +115,15 @@ abstract contract AbstractDeployer {
 
         // Generate unique salt
         bytes32 salt = _generateSalt();
-        emit SaltGenerated(
-            salt,
-            block.chainid,
-            blockhash(block.number - 1),
-            address(this)
-        );
+        emit SaltGenerated(salt, block.chainid, blockhash(block.number - 1), address(this));
 
         DeploymentAddresses memory addresses;
 
         // Deploy Token contract
         addresses.token = address(
-            new Token{salt: salt}(
-                tokenConfig.name,
-                tokenConfig.symbol,
-                tokenConfig.initialSupply,
-                address(this)
-            )
+            new Token{salt: salt}(tokenConfig.name, tokenConfig.symbol, tokenConfig.initialSupply, address(this))
         );
-        emit TokenDeployed(
-            addresses.token,
-            tokenConfig.name,
-            tokenConfig.symbol
-        );
+        emit TokenDeployed(addresses.token, tokenConfig.name, tokenConfig.symbol);
 
         // Deploy Governor contract
         addresses.governor = address(
@@ -169,23 +136,17 @@ abstract contract AbstractDeployer {
                 governorConfig.lateQuorumExtension
             )
         );
-        emit GovernorDeployed(
-            addresses.governor,
-            governorConfig.name,
-            addresses.token
-        );
+        emit GovernorDeployed(addresses.governor, governorConfig.name, addresses.token);
 
         // Deploy TokenSplitter contract if payees data is provided
         if (splitterConfig.packedPayeesData.length > 0) {
-            addresses.splitter = address(
-                new TokenSplitter{salt: salt}(address(this))
-            );
+            addresses.splitter = address(new TokenSplitter{salt: salt}(address(this)));
             emit SplitterDeployed(addresses.splitter, addresses.governor);
-            
+
             // Configure the splitter with pre-generated packed calldata
             TokenSplitter splitter = TokenSplitter(addresses.splitter);
             splitter.updatePayees(splitterConfig.packedPayeesData);
-            
+
             // Transfer ownership to the governor
             splitter.transferOwnership(addresses.governor);
         }
@@ -198,23 +159,14 @@ abstract contract AbstractDeployer {
             TokenDistribution memory dist = distributions[i];
             token.mint(dist.recipient, dist.amount);
             totalDistributed += dist.amount;
-            emit TokensDistributed(
-                addresses.token,
-                dist.recipient,
-                dist.amount
-            );
+            emit TokensDistributed(addresses.token, dist.recipient, dist.amount);
         }
 
         // Transfer token ownership to the final owner
         token.transferOwnership(finalOwner);
 
         emit DeploymentCompleted(
-            addresses.token,
-            addresses.governor,
-            addresses.splitter,
-            finalOwner,
-            totalDistributed,
-            salt
+            addresses.token, addresses.governor, addresses.splitter, finalOwner, totalDistributed, salt
         );
 
         // Emit self-destruct event
@@ -229,22 +181,14 @@ abstract contract AbstractDeployer {
      */
     function _generateSalt() internal view returns (bytes32 salt) {
         salt = keccak256(
-            abi.encodePacked(
-                block.chainid,
-                blockhash(block.number - 1),
-                address(this),
-                block.timestamp,
-                tx.origin
-            )
+            abi.encodePacked(block.chainid, blockhash(block.number - 1), address(this), block.timestamp, tx.origin)
         );
     }
 
     /**
      * @dev Internal function to validate distributions
      */
-    function _validateDistributions(
-        TokenDistribution[] memory distributions
-    ) internal pure {
+    function _validateDistributions(TokenDistribution[] memory distributions) internal pure {
         require(distributions.length <= 100, TooManyDistributions());
 
         for (uint256 i = 0; i < distributions.length; i++) {
@@ -261,9 +205,7 @@ abstract contract AbstractDeployer {
     /**
      * @dev Internal function to validate splitter config
      */
-    function _validateSplitterConfig(
-        SplitterConfig memory splitterConfig
-    ) internal pure {
+    function _validateSplitterConfig(SplitterConfig memory splitterConfig) internal pure {
         require(splitterConfig.packedPayeesData.length > 0, EmptyCalldata());
         require(splitterConfig.packedPayeesData.length % 22 == 0, InvalidCalldataLength());
 
@@ -272,22 +214,22 @@ abstract contract AbstractDeployer {
 
         uint256 totalShares = 0;
         bytes memory data = splitterConfig.packedPayeesData;
-        
+
         // Validate packed payees data
         for (uint256 i = 0; i < payeeCount; i++) {
             uint256 offset = i * 22;
-            
+
             // Extract shares (first 2 bytes) and address (next 20 bytes)
             uint16 payeeShares;
             address payee;
-            
+
             assembly {
                 let dataPtr := add(data, 0x20) // Skip bytes length prefix
                 let entry := add(dataPtr, offset)
                 payeeShares := shr(240, mload(entry)) // Get first 2 bytes
                 payee := shr(96, mload(add(entry, 2))) // Get next 20 bytes
             }
-            
+
             require(payee != address(0), PayeeZeroAddress());
             require(payeeShares > 0, PayeeSharesMustBeGreaterThanZero());
             totalShares += payeeShares;
@@ -296,13 +238,13 @@ abstract contract AbstractDeployer {
             for (uint256 j = i + 1; j < payeeCount; j++) {
                 uint256 nextOffset = j * 22;
                 address nextPayee;
-                
+
                 assembly {
                     let dataPtr := add(data, 0x20) // Skip bytes length prefix
                     let nextEntry := add(dataPtr, nextOffset)
                     nextPayee := shr(96, mload(add(nextEntry, 2))) // Get address at offset + 2
                 }
-                
+
                 require(payee != nextPayee, DuplicatePayee());
             }
         }
@@ -321,15 +263,7 @@ contract Deployer is AbstractDeployer {
         SplitterConfig memory splitterConfig,
         TokenDistribution[] memory distributions,
         address finalOwner
-    )
-        AbstractDeployer(
-            tokenConfig,
-            governorConfig,
-            splitterConfig,
-            distributions,
-            finalOwner
-        )
-    {}
+    ) AbstractDeployer(tokenConfig, governorConfig, splitterConfig, distributions, finalOwner) {}
 }
 
 /**
@@ -343,15 +277,7 @@ contract TestableDeployer is AbstractDeployer {
         SplitterConfig memory splitterConfig,
         TokenDistribution[] memory distributions,
         address finalOwner
-    )
-        AbstractDeployer(
-            tokenConfig,
-            governorConfig,
-            splitterConfig,
-            distributions,
-            finalOwner
-        )
-    {}
+    ) AbstractDeployer(tokenConfig, governorConfig, splitterConfig, distributions, finalOwner) {}
 
     function predictDeploymentAddresses(
         address deployer,
@@ -364,28 +290,11 @@ contract TestableDeployer is AbstractDeployer {
         bytes32 tokenBytecodeHash = keccak256(
             abi.encodePacked(
                 type(Token).creationCode,
-                abi.encode(
-                    tokenConfig.name,
-                    tokenConfig.symbol,
-                    tokenConfig.initialSupply,
-                    deployer
-                )
+                abi.encode(tokenConfig.name, tokenConfig.symbol, tokenConfig.initialSupply, deployer)
             )
         );
-        addresses.token = address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            deployer,
-                            salt,
-                            tokenBytecodeHash
-                        )
-                    )
-                )
-            )
-        );
+        addresses.token =
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, tokenBytecodeHash)))));
 
         // Predict Governor address
         bytes32 governorBytecodeHash = keccak256(
@@ -400,63 +309,26 @@ contract TestableDeployer is AbstractDeployer {
                 )
             )
         );
-        addresses.governor = address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            deployer,
-                            salt,
-                            governorBytecodeHash
-                        )
-                    )
-                )
-            )
-        );
+        addresses.governor =
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, governorBytecodeHash)))));
 
         // Predict Splitter address if payees data is provided
         if (splitterConfig.packedPayeesData.length > 0) {
-            bytes32 splitterBytecodeHash = keccak256(
-                abi.encodePacked(
-                    type(TokenSplitter).creationCode,
-                    abi.encode(deployer)
-                )
-            );
+            bytes32 splitterBytecodeHash =
+                keccak256(abi.encodePacked(type(TokenSplitter).creationCode, abi.encode(deployer)));
             addresses.splitter = address(
-                uint160(
-                    uint256(
-                        keccak256(
-                            abi.encodePacked(
-                                bytes1(0xff),
-                                deployer,
-                                salt,
-                                splitterBytecodeHash
-                            )
-                        )
-                    )
-                )
+                uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, splitterBytecodeHash))))
             );
         }
     }
 
-    function generatePredictableSalt(
-        address deployerAddress
-    ) external view returns (bytes32 salt) {
+    function generatePredictableSalt(address deployerAddress) external view returns (bytes32 salt) {
         salt = keccak256(
-            abi.encodePacked(
-                block.chainid,
-                blockhash(block.number - 1),
-                deployerAddress,
-                block.timestamp,
-                tx.origin
-            )
+            abi.encodePacked(block.chainid, blockhash(block.number - 1), deployerAddress, block.timestamp, tx.origin)
         );
     }
 
-    function validateDistributions(
-        TokenDistribution[] memory distributions
-    ) external pure returns (bool valid) {
+    function validateDistributions(TokenDistribution[] memory distributions) external pure returns (bool valid) {
         require(distributions.length <= 100, TooManyDistributions());
 
         for (uint256 i = 0; i < distributions.length; i++) {
@@ -472,9 +344,7 @@ contract TestableDeployer is AbstractDeployer {
         return true;
     }
 
-    function validateSplitterConfig(
-        SplitterConfig memory splitterConfig
-    ) external pure returns (bool valid) {
+    function validateSplitterConfig(SplitterConfig memory splitterConfig) external pure returns (bool valid) {
         if (splitterConfig.packedPayeesData.length == 0) {
             return true; // Empty config is valid (no splitter will be deployed)
         }
@@ -483,13 +353,13 @@ contract TestableDeployer is AbstractDeployer {
         return true;
     }
 
-    function calculateTotalDistribution(
-        TokenDistribution[] memory distributions
-    ) external pure returns (uint256 total) {
+    function calculateTotalDistribution(TokenDistribution[] memory distributions)
+        external
+        pure
+        returns (uint256 total)
+    {
         for (uint256 i = 0; i < distributions.length; i++) {
             total += distributions[i].amount;
         }
     }
-
-
 }

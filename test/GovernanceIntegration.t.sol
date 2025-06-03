@@ -20,7 +20,6 @@ import "../src/Deployer.sol";
  * The tests use a realistic scenario with multiple token holders having
  * different voting power percentages to simulate real-world governance.
  */
-
 contract GovernanceIntegrationTest is TestHelper {
     Token public token;
     TokenGovernor public governor;
@@ -45,8 +44,7 @@ contract GovernanceIntegrationTest is TestHelper {
         // VOTER1:   3,000 tokens (30%) - significant voting power
         // VOTER2:   4,000 tokens (40%) - largest voting block
         // VOTER3:   2,000 tokens (20%) - minority voting power
-        AbstractDeployer.TokenDistribution[]
-            memory distributions = new AbstractDeployer.TokenDistribution[](4);
+        AbstractDeployer.TokenDistribution[] memory distributions = new AbstractDeployer.TokenDistribution[](4);
         distributions[0] = AbstractDeployer.TokenDistribution({
             recipient: PROPOSER,
             amount: 1000e18 // 10% of total supply
@@ -70,22 +68,12 @@ contract GovernanceIntegrationTest is TestHelper {
         vm.recordLogs();
 
         new TestableDeployer(
-            createBasicTokenConfig(),
-            createBasicGovernorConfig(),
-            emptySplitterConfig,
-            distributions,
-            OWNER
+            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER
         );
 
         // Extract deployed contract addresses from deployment logs
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        (
-            address tokenAddress,
-            address governorAddress,
-            address splitterAddress,
-            ,
-
-        ) = extractDeploymentAddresses(logs);
+        (address tokenAddress, address governorAddress, address splitterAddress,,) = extractDeploymentAddresses(logs);
 
         token = Token(tokenAddress);
         governor = TokenGovernor(payable(governorAddress));
@@ -158,27 +146,16 @@ contract GovernanceIntegrationTest is TestHelper {
 
         // Create proposal using PROPOSER account (has sufficient voting power)
         vm.prank(PROPOSER);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Verify proposal starts in Pending state
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Pending)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Pending));
 
         // Move past voting delay period
         vm.roll(block.number + VOTING_DELAY + 1);
 
         // Verify proposal transitions to Active state and can accept votes
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Active)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Active));
     }
 
     /**
@@ -198,12 +175,7 @@ contract GovernanceIntegrationTest is TestHelper {
         string memory description = "Set mock target value to 123";
 
         vm.prank(PROPOSER);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Move past voting delay to enable voting
         vm.roll(block.number + VOTING_DELAY + 1);
@@ -220,11 +192,7 @@ contract GovernanceIntegrationTest is TestHelper {
         governor.castVote(proposalId, 0); // AGAINST
 
         // Verify vote tallies
-        (
-            uint256 againstVotes,
-            uint256 forVotes,
-            uint256 abstainVotes
-        ) = governor.proposalVotes(proposalId);
+        (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes) = governor.proposalVotes(proposalId);
         assertEq(forVotes, 7000e18); // VOTER1 (3000) + VOTER2 (4000)
         assertEq(againstVotes, 2000e18); // VOTER3 (2000)
         assertEq(abstainVotes, 0);
@@ -233,26 +201,15 @@ contract GovernanceIntegrationTest is TestHelper {
         vm.roll(block.number + VOTING_PERIOD + 1);
 
         // Verify proposal succeeded (FOR > AGAINST and quorum met)
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Succeeded));
 
         // Execute proposal directly (this governor has no timelock)
-        governor.execute(
-            targets,
-            values,
-            calldatas,
-            keccak256(bytes(description))
-        );
+        governor.execute(targets, values, calldatas, keccak256(bytes(description)));
 
         // Verify execution results
         assertEq(mockTarget.value(), 123);
         assertTrue(mockTarget.executed());
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Executed)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Executed));
     }
 
     function testProposalFailsWithInsufficientVotes() public {
@@ -268,12 +225,7 @@ contract GovernanceIntegrationTest is TestHelper {
         string memory description = "This proposal should fail";
 
         vm.prank(PROPOSER);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Move past voting delay
         vm.roll(block.number + VOTING_DELAY + 1);
@@ -293,10 +245,7 @@ contract GovernanceIntegrationTest is TestHelper {
         vm.roll(block.number + VOTING_PERIOD + 1);
 
         // Verify proposal was defeated
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Defeated)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Defeated));
     }
 
     function testProposalFailsWithInsufficientQuorum() public {
@@ -309,16 +258,10 @@ contract GovernanceIntegrationTest is TestHelper {
         values[0] = 0;
         calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 789);
 
-        string
-            memory description = "This proposal should fail due to low participation";
+        string memory description = "This proposal should fail due to low participation";
 
         vm.prank(PROPOSER);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Move past voting delay
         vm.roll(block.number + VOTING_DELAY + 1);
@@ -337,10 +280,7 @@ contract GovernanceIntegrationTest is TestHelper {
         vm.roll(block.number + VOTING_PERIOD + 1);
 
         // Verify proposal was defeated due to insufficient quorum
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Defeated)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Defeated));
     }
 
     /**
@@ -379,12 +319,7 @@ contract GovernanceIntegrationTest is TestHelper {
         string memory description = "Test with updated voting power";
 
         vm.prank(PROPOSER);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Move past voting delay
         vm.roll(block.number + VOTING_DELAY + 1);
@@ -405,10 +340,7 @@ contract GovernanceIntegrationTest is TestHelper {
         vm.roll(block.number + VOTING_PERIOD + 1);
 
         // Verify proposal succeeded
-        assertEq(
-            uint256(governor.state(proposalId)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Succeeded));
     }
 
     function testProposalThresholdEnforcement() public {
@@ -419,21 +351,13 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(governor);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature(
-            "setProposalThreshold(uint256)",
-            1000e18
-        );
+        calldatas[0] = abi.encodeWithSignature("setProposalThreshold(uint256)", 1000e18);
 
         string memory description = "Set proposal threshold to 1000 tokens";
 
         // Create and execute proposal to set threshold
         vm.prank(PROPOSER);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         vm.roll(block.number + VOTING_DELAY + 1);
 
@@ -445,12 +369,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         vm.roll(block.number + VOTING_PERIOD + 1);
 
-        governor.execute(
-            targets,
-            values,
-            calldatas,
-            keccak256(bytes(description))
-        );
+        governor.execute(targets, values, calldatas, keccak256(bytes(description)));
 
         // Now test that proposal threshold is enforced
         address smallHolder = address(0x99);
@@ -473,18 +392,12 @@ contract GovernanceIntegrationTest is TestHelper {
         failValues[0] = 0;
         failCalldatas[0] = abi.encodeWithSignature("setValue(uint256)", 111);
 
-        string
-            memory failDescription = "This should fail due to proposal threshold";
+        string memory failDescription = "This should fail due to proposal threshold";
 
         // This should revert due to insufficient proposal threshold
         vm.prank(smallHolder);
         vm.expectRevert();
-        governor.propose(
-            failTargets,
-            failValues,
-            failCalldatas,
-            failDescription
-        );
+        governor.propose(failTargets, failValues, failCalldatas, failDescription);
     }
 
     function testMultipleProposalsAndVoting() public {
@@ -500,12 +413,7 @@ contract GovernanceIntegrationTest is TestHelper {
         string memory description1 = "First proposal";
 
         vm.prank(PROPOSER);
-        uint256 proposalId1 = governor.propose(
-            targets1,
-            values1,
-            calldatas1,
-            description1
-        );
+        uint256 proposalId1 = governor.propose(targets1, values1, calldatas1, description1);
 
         // Create second proposal
         address[] memory targets2 = new address[](1);
@@ -519,12 +427,7 @@ contract GovernanceIntegrationTest is TestHelper {
         string memory description2 = "Second proposal";
 
         vm.prank(VOTER1);
-        uint256 proposalId2 = governor.propose(
-            targets2,
-            values2,
-            calldatas2,
-            description2
-        );
+        uint256 proposalId2 = governor.propose(targets2, values2, calldatas2, description2);
 
         // Move past voting delay
         vm.roll(block.number + VOTING_DELAY + 1);
@@ -553,16 +456,10 @@ contract GovernanceIntegrationTest is TestHelper {
 
         // Check results
         // Proposal 1: FOR = 3000 + 2000 = 5000, AGAINST = 4000, should succeed
-        assertEq(
-            uint256(governor.state(proposalId1)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governor.state(proposalId1)), uint256(IGovernor.ProposalState.Succeeded));
 
         // Proposal 2: FOR = 4000 + 2000 = 6000, AGAINST = 3000, should succeed
-        assertEq(
-            uint256(governor.state(proposalId2)),
-            uint256(IGovernor.ProposalState.Succeeded)
-        );
+        assertEq(uint256(governor.state(proposalId2)), uint256(IGovernor.ProposalState.Succeeded));
     }
 
     function testGovernanceSettingsCanBeUpdated() public {
@@ -590,12 +487,7 @@ contract GovernanceIntegrationTest is TestHelper {
         string memory description = "Test governance settings verification";
 
         vm.prank(PROPOSER);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Move past voting delay
         vm.roll(block.number + VOTING_DELAY + 1);
@@ -611,12 +503,7 @@ contract GovernanceIntegrationTest is TestHelper {
         vm.roll(block.number + VOTING_PERIOD + 1);
 
         // Execute proposal
-        governor.execute(
-            targets,
-            values,
-            calldatas,
-            keccak256(bytes(description))
-        );
+        governor.execute(targets, values, calldatas, keccak256(bytes(description)));
 
         // Verify execution
         assertEq(mockTarget.value(), 777);
@@ -650,12 +537,7 @@ contract GovernanceIntegrationTest is TestHelper {
         string memory description = "Compatibility test proposal";
 
         vm.prank(PROPOSER);
-        uint256 proposalId = governor.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
 
         // Move past voting delay
         vm.roll(block.number + VOTING_DELAY + 1);
@@ -669,18 +551,13 @@ contract GovernanceIntegrationTest is TestHelper {
 
         vm.roll(block.number + VOTING_PERIOD + 1);
 
-        governor.execute(
-            targets,
-            values,
-            calldatas,
-            keccak256(bytes(description))
-        );
+        governor.execute(targets, values, calldatas, keccak256(bytes(description)));
 
         // Verify execution succeeded
         assertEq(mockTarget.value(), 42);
         assertTrue(mockTarget.executed());
     }
-    
+
     /**
      * @dev Test that late quorum extension works correctly.
      * When quorum is reached late in the voting period, the voting period should be extended.
@@ -690,80 +567,80 @@ contract GovernanceIntegrationTest is TestHelper {
         address[] memory targets = new address[](1);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        
+
         targets[0] = address(mockTarget);
         values[0] = 0;
         calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 888);
-        
+
         string memory description = "Test late quorum extension";
-        
+
         vm.prank(PROPOSER);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
-        
+
         // Move past voting delay
         vm.roll(block.number + VOTING_DELAY + 1);
-        
+
         // Get initial proposal deadline
         uint256 initialDeadline = governor.proposalDeadline(proposalId);
-        
+
         // Move close to the end of voting period (within late quorum extension window)
         // We'll move to a point where there are only LATE_QUORUM_EXTENSION/2 blocks left
         uint256 blocksFromEnd = LATE_QUORUM_EXTENSION / 2;
         vm.roll(initialDeadline - blocksFromEnd);
-        
+
         // At this point, quorum hasn't been reached yet
         (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes) = governor.proposalVotes(proposalId);
         assertEq(forVotes + againstVotes + abstainVotes, 0); // No votes yet
-        
+
         // Now cast enough votes to reach quorum near the deadline
         // We need 5000e18 for quorum, so let's use VOTER1 (3000e18) + VOTER2 (4000e18) = 7000e18
         vm.prank(VOTER1);
         governor.castVote(proposalId, 1); // FOR
-        
+
         // This should trigger late quorum extension since we're close to deadline
         vm.prank(VOTER2);
         governor.castVote(proposalId, 1); // FOR
-        
+
         // Get new deadline after late quorum extension
         uint256 newDeadline = governor.proposalDeadline(proposalId);
-        
+
         // Verify that the deadline was extended
         assertTrue(newDeadline > initialDeadline, "Deadline should be extended due to late quorum");
-        
+
         // The extension should be approximately LATE_QUORUM_EXTENSION blocks
         // (allowing for some variance due to how GovernorPreventLateQuorum calculates it)
         uint256 extension = newDeadline - initialDeadline;
         assertTrue(extension >= LATE_QUORUM_EXTENSION / 2, "Extension should be meaningful");
         assertTrue(extension <= LATE_QUORUM_EXTENSION * 2, "Extension should not be excessive");
-        
+
         // Verify that we can still vote during the extended period
         vm.roll(initialDeadline + 1); // Move past original deadline
-        
+
         // VOTER3 should still be able to vote since deadline was extended
         vm.prank(VOTER3);
         governor.castVote(proposalId, 0); // AGAINST
-        
+
         // Verify the vote was counted
         (againstVotes, forVotes, abstainVotes) = governor.proposalVotes(proposalId);
         assertEq(forVotes, 7000e18); // VOTER1 + VOTER2
         assertEq(againstVotes, 2000e18); // VOTER3
         assertEq(abstainVotes, 0);
-        
+
         // Move past the new extended deadline
         vm.roll(newDeadline + 1);
-        
+
         // Proposal should have succeeded (FOR > AGAINST and quorum met)
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Succeeded));
-        
+
         // Execute the proposal to verify it works
         governor.execute(targets, values, calldatas, keccak256(bytes(description)));
-        
+
         // Verify execution
         assertEq(mockTarget.value(), 888);
         assertTrue(mockTarget.executed());
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Executed));
     }
-    
+
     /**
      * @dev Test that early votes do not trigger late quorum extension.
      * Quorum reached early in voting period should not extend the deadline.
@@ -773,48 +650,48 @@ contract GovernanceIntegrationTest is TestHelper {
         address[] memory targets = new address[](1);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        
+
         targets[0] = address(mockTarget);
         values[0] = 0;
         calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 999);
-        
+
         string memory description = "Test early quorum does not extend";
-        
+
         vm.prank(PROPOSER);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
-        
+
         // Move past voting delay
         vm.roll(block.number + VOTING_DELAY + 1);
-        
+
         // Get initial proposal deadline
         uint256 initialDeadline = governor.proposalDeadline(proposalId);
-        
+
         // Vote early in the voting period (right after voting delay)
         vm.prank(VOTER1);
         governor.castVote(proposalId, 1); // FOR
-        
+
         vm.prank(VOTER2);
         governor.castVote(proposalId, 1); // FOR
-        
+
         // Check deadline after early voting
         uint256 deadlineAfterEarlyVoting = governor.proposalDeadline(proposalId);
-        
+
         // Deadline should not have changed since votes were cast early
         assertEq(deadlineAfterEarlyVoting, initialDeadline, "Early voting should not extend deadline");
-        
+
         // Move to near the end of voting period and cast another vote
         vm.roll(initialDeadline - 5);
-        
+
         vm.prank(VOTER3);
         governor.castVote(proposalId, 0); // AGAINST
-        
+
         // Deadline should still be the same since quorum was already reached early
         uint256 finalDeadline = governor.proposalDeadline(proposalId);
         assertEq(finalDeadline, initialDeadline, "Deadline should remain unchanged");
-        
+
         // Move past original deadline
         vm.roll(initialDeadline + 1);
-        
+
         // Proposal should be in Succeeded state
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Succeeded));
     }

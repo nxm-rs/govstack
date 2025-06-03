@@ -29,11 +29,7 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
     error EmptyCalldata();
     error InvalidCalldataLength();
 
-    event TokensReleased(
-        address indexed token,
-        address indexed to,
-        uint256 amount
-    );
+    event TokensReleased(address indexed token, address indexed to, uint256 amount);
     event TokensSplit(address indexed token, uint256 totalAmount);
     event PayeeAdded(address indexed payee, uint256 shares);
     event PayeesUpdated(bytes32 indexed newPayeesHash);
@@ -61,10 +57,7 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
      */
     function updatePayees(bytes calldata packedPayeesData) external onlyOwner {
         require(packedPayeesData.length != 0, EmptyCalldata());
-        require(
-            packedPayeesData.length % PAYEE_DATA_SIZE == 0,
-            InvalidCalldataLength()
-        );
+        require(packedPayeesData.length % PAYEE_DATA_SIZE == 0, InvalidCalldataLength());
 
         uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
         require(payeeCount != 0, InvalidShares());
@@ -74,13 +67,10 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
         uint256 totalShares = 0;
 
         // Validate payees and emit events
-        for (uint256 i = 0; i < payeeCount; ) {
+        for (uint256 i = 0; i < payeeCount;) {
             uint256 offset = i * PAYEE_DATA_SIZE;
 
-            (uint16 payeeShares, address payee) = _extractPayeeData(
-                packedPayeesData,
-                offset
-            );
+            (uint16 payeeShares, address payee) = _extractPayeeData(packedPayeesData, offset);
 
             require(payee != address(0), InvalidShares());
             require(payeeShares != 0, InvalidShares());
@@ -107,11 +97,7 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
      * @param amount The amount of tokens to split
      * @param packedPayeesData Calldata containing payees and shares for verification
      */
-    function splitToken(
-        address token,
-        uint256 amount,
-        bytes calldata packedPayeesData
-    ) external nonReentrant {
+    function splitToken(address token, uint256 amount, bytes calldata packedPayeesData) external nonReentrant {
         require(amount != 0, ZeroAmount());
         require(packedPayeesData.length != 0, EmptyCalldata());
 
@@ -125,21 +111,12 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
         uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
 
         // Iterate through packed data and distribute tokens
-        for (uint256 i = 0; i < payeeCount; ) {
+        for (uint256 i = 0; i < payeeCount;) {
             uint256 offset = i * PAYEE_DATA_SIZE;
 
-            (uint16 payeeShares, address payee) = _extractPayeeData(
-                packedPayeesData,
-                offset
-            );
+            (uint16 payeeShares, address payee) = _extractPayeeData(packedPayeesData, offset);
 
-            uint256 payment = _calculatePayment(
-                amount,
-                payeeShares,
-                i,
-                payeeCount,
-                totalDistributed
-            );
+            uint256 payment = _calculatePayment(amount, payeeShares, i, payeeCount, totalDistributed);
 
             if (payment > 0) {
                 totalDistributed += payment;
@@ -162,9 +139,7 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
      * @param payees Array of PayeeData structs containing address and shares
      * @return hash The keccak256 hash that would be stored for these payees
      */
-    function calculatePayeesHash(
-        PayeeData[] calldata payees
-    ) external pure returns (bytes32 hash) {
+    function calculatePayeesHash(PayeeData[] calldata payees) external pure returns (bytes32 hash) {
         bytes memory packedData = _createPackedPayeesData(payees);
         hash = keccak256(packedData);
     }
@@ -176,10 +151,11 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
      * @return isPayee Whether the address is a payee
      * @return accountShares The shares for this address (0 if not a payee)
      */
-    function getPayeeInfo(
-        address account,
-        bytes calldata packedPayeesData
-    ) external view returns (bool isPayee, uint16 accountShares) {
+    function getPayeeInfo(address account, bytes calldata packedPayeesData)
+        external
+        view
+        returns (bool isPayee, uint16 accountShares)
+    {
         if (packedPayeesData.length == 0) return (false, 0);
 
         // Verify the provided calldata matches stored hash
@@ -189,23 +165,17 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
         uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
 
         // Scan through payees to find the account
-        for (uint256 i = 0; i < payeeCount; ) {
+        for (uint256 i = 0; i < payeeCount;) {
             uint256 offset = i * PAYEE_DATA_SIZE;
 
             address payee;
             assembly {
-                payee := shr(
-                    96,
-                    calldataload(add(packedPayeesData.offset, add(offset, 2)))
-                )
+                payee := shr(96, calldataload(add(packedPayeesData.offset, add(offset, 2))))
             }
 
             if (payee == account) {
                 assembly {
-                    accountShares := shr(
-                        240,
-                        calldataload(add(packedPayeesData.offset, offset))
-                    )
+                    accountShares := shr(240, calldataload(add(packedPayeesData.offset, offset)))
                 }
                 return (true, accountShares);
             }
@@ -224,10 +194,11 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
      * @param packedPayeesData Calldata containing payees and shares
      * @return payeeAmounts Array of amounts each payee would receive
      */
-    function calculateSplit(
-        uint256 amount,
-        bytes calldata packedPayeesData
-    ) external view returns (uint256[] memory payeeAmounts) {
+    function calculateSplit(uint256 amount, bytes calldata packedPayeesData)
+        external
+        view
+        returns (uint256[] memory payeeAmounts)
+    {
         require(packedPayeesData.length != 0, EmptyCalldata());
 
         // Verify the provided calldata matches stored hash
@@ -238,24 +209,15 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
         payeeAmounts = new uint256[](payeeCount);
         uint256 totalDistributed = 0;
 
-        for (uint256 i = 0; i < payeeCount; ) {
+        for (uint256 i = 0; i < payeeCount;) {
             uint256 offset = i * PAYEE_DATA_SIZE;
 
             uint16 payeeShares;
             assembly {
-                payeeShares := shr(
-                    240,
-                    calldataload(add(packedPayeesData.offset, offset))
-                )
+                payeeShares := shr(240, calldataload(add(packedPayeesData.offset, offset)))
             }
 
-            uint256 payment = _calculatePayment(
-                amount,
-                payeeShares,
-                i,
-                payeeCount,
-                totalDistributed
-            );
+            uint256 payment = _calculatePayment(amount, payeeShares, i, payeeCount, totalDistributed);
             payeeAmounts[i] = payment;
             totalDistributed += payment;
 
@@ -271,9 +233,7 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
      * @param payees Array of PayeeData structs containing address and shares
      * @return packedData The tightly packed bytes for use with other functions
      */
-    function createPackedPayeesData(
-        PayeeData[] calldata payees
-    ) external pure returns (bytes memory packedData) {
+    function createPackedPayeesData(PayeeData[] calldata payees) external pure returns (bytes memory packedData) {
         return _createPackedPayeesData(payees);
     }
 
@@ -292,21 +252,16 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
      * @return payeeShares The shares for this payee
      * @return payee The payee address
      */
-    function _extractPayeeData(
-        bytes calldata packedPayeesData,
-        uint256 offset
-    ) internal pure returns (uint16 payeeShares, address payee) {
+    function _extractPayeeData(bytes calldata packedPayeesData, uint256 offset)
+        internal
+        pure
+        returns (uint16 payeeShares, address payee)
+    {
         assembly {
             // Load shares (first 2 bytes, big endian)
-            payeeShares := shr(
-                240,
-                calldataload(add(packedPayeesData.offset, offset))
-            )
+            payeeShares := shr(240, calldataload(add(packedPayeesData.offset, offset)))
             // Load address (next 20 bytes)
-            payee := shr(
-                96,
-                calldataload(add(packedPayeesData.offset, add(offset, 2)))
-            )
+            payee := shr(96, calldataload(add(packedPayeesData.offset, add(offset, 2))))
         }
     }
 
@@ -316,14 +271,12 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
      * @param payees Array of PayeeData structs containing address and shares
      * @return packedData The tightly packed bytes for use with other functions
      */
-    function _createPackedPayeesData(
-        PayeeData[] calldata payees
-    ) internal pure returns (bytes memory packedData) {
+    function _createPackedPayeesData(PayeeData[] calldata payees) internal pure returns (bytes memory packedData) {
         require(payees.length != 0, InvalidShares());
 
         // Create a memory array to sort by address
         PayeeData[] memory sortedPayees = new PayeeData[](payees.length);
-        for (uint256 i = 0; i < payees.length; ) {
+        for (uint256 i = 0; i < payees.length;) {
             sortedPayees[i] = payees[i];
             unchecked {
                 ++i;
@@ -332,8 +285,8 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
 
         // Sort by address using bubble sort (simple but gas-inefficient for large arrays)
         // Do not use on-chain sorting for large arrays due to gas inefficiency
-        for (uint256 i = 0; i < sortedPayees.length - 1; ) {
-            for (uint256 j = 0; j < sortedPayees.length - i - 1; ) {
+        for (uint256 i = 0; i < sortedPayees.length - 1;) {
+            for (uint256 j = 0; j < sortedPayees.length - i - 1;) {
                 if (sortedPayees[j].payee > sortedPayees[j + 1].payee) {
                     PayeeData memory temp = sortedPayees[j];
                     sortedPayees[j] = sortedPayees[j + 1];
@@ -349,12 +302,8 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
         }
 
         // Use abi.encodePacked for simple and correct packing
-        for (uint256 i = 0; i < sortedPayees.length; ) {
-            packedData = abi.encodePacked(
-                packedData,
-                sortedPayees[i].shares,
-                sortedPayees[i].payee
-            );
+        for (uint256 i = 0; i < sortedPayees.length;) {
+            packedData = abi.encodePacked(packedData, sortedPayees[i].shares, sortedPayees[i].payee);
             unchecked {
                 ++i;
             }
@@ -384,7 +333,4 @@ contract TokenSplitter is ReentrancyGuard, Ownable {
             payment = (totalAmount * payeeShares) / TOTAL_SHARES_BPS;
         }
     }
-
-
-
 }

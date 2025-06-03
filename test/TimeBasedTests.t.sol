@@ -152,26 +152,14 @@ contract TimeBasedTests is TestHelper {
         string memory oneDay = "1 day";
 
         // Ethereum mainnet (12s blocks)
-        assertEq(
-            deployer._parseTimeToBlocks(oneDay, ETHEREUM_BLOCK_TIME_MS),
-            7200
-        );
+        assertEq(deployer._parseTimeToBlocks(oneDay, ETHEREUM_BLOCK_TIME_MS), 7200);
 
         // Fast L2 network (2s blocks)
-        assertEq(
-            deployer._parseTimeToBlocks(oneDay, 2000),
-            43200
-        );
+        assertEq(deployer._parseTimeToBlocks(oneDay, 2000), 43200);
 
         // Test network (1s blocks for fast testing)
-        assertEq(
-            deployer._parseTimeToBlocks("5 minutes", LOCALHOST_BLOCK_TIME_MS),
-            300
-        );
-        assertEq(
-            deployer._parseTimeToBlocks("2 hours", LOCALHOST_BLOCK_TIME_MS),
-            7200
-        );
+        assertEq(deployer._parseTimeToBlocks("5 minutes", LOCALHOST_BLOCK_TIME_MS), 300);
+        assertEq(deployer._parseTimeToBlocks("2 hours", LOCALHOST_BLOCK_TIME_MS), 7200);
     }
 
     /**
@@ -205,14 +193,13 @@ contract TimeBasedTests is TestHelper {
         // Test with Ethereum mainnet block times
         vm.chainId(1);
 
-        Deploy.TimeBasedGovernorConfig memory config = Deploy
-            .TimeBasedGovernorConfig({
-                name: "Test Governor",
-                votingDelayTime: "1 day",
-                votingPeriodTime: "1 week",
-                lateQuorumExtensionTime: "1 hour",
-                quorumNumerator: 500
-            });
+        Deploy.TimeBasedGovernorConfig memory config = Deploy.TimeBasedGovernorConfig({
+            name: "Test Governor",
+            votingDelayTime: "1 day",
+            votingPeriodTime: "1 week",
+            lateQuorumExtensionTime: "1 hour",
+            quorumNumerator: 500
+        });
 
         // Create a mock network config for Ethereum
         Deploy.NetworkConfig memory networkConfig = Deploy.NetworkConfig({
@@ -224,8 +211,8 @@ contract TimeBasedTests is TestHelper {
         });
 
         // The deploy script should convert these times to blocks based on network
-        AbstractDeployer.GovernorConfig memory convertedConfig = deployer
-            ._convertTimeBasedGovernorConfig(config, networkConfig);
+        AbstractDeployer.GovernorConfig memory convertedConfig =
+            deployer._convertTimeBasedGovernorConfig(config, networkConfig);
 
         // With 12-second blocks:
         // 1 day = 86400 seconds = 7200 blocks
@@ -241,14 +228,13 @@ contract TimeBasedTests is TestHelper {
      * @dev Test conversion across different networks
      */
     function testConversionAcrossNetworks() public {
-        Deploy.TimeBasedGovernorConfig memory config = Deploy
-            .TimeBasedGovernorConfig({
-                name: "Multi Network Governor",
-                votingDelayTime: "2 days",
-                votingPeriodTime: "1 week",
-                lateQuorumExtensionTime: "6 hours",
-                quorumNumerator: 1000
-            });
+        Deploy.TimeBasedGovernorConfig memory config = Deploy.TimeBasedGovernorConfig({
+            name: "Multi Network Governor",
+            votingDelayTime: "2 days",
+            votingPeriodTime: "1 week",
+            lateQuorumExtensionTime: "6 hours",
+            quorumNumerator: 1000
+        });
 
         // Test Ethereum (12s blocks)
         vm.chainId(1);
@@ -259,8 +245,7 @@ contract TimeBasedTests is TestHelper {
             gasPriceGwei: 20,
             gasLimit: 8000000
         });
-        AbstractDeployer.GovernorConfig memory ethConfig = deployer
-            ._convertTimeBasedGovernorConfig(config, ethNetwork);
+        AbstractDeployer.GovernorConfig memory ethConfig = deployer._convertTimeBasedGovernorConfig(config, ethNetwork);
         assertEq(ethConfig.votingDelay, 14400); // 2 days = 172800s = 14400 blocks
         assertEq(ethConfig.votingPeriod, 50400); // 1 week = 604800s = 50400 blocks
         assertEq(ethConfig.lateQuorumExtension, 1800); // 6 hours = 21600s = 1800 blocks
@@ -274,8 +259,8 @@ contract TimeBasedTests is TestHelper {
             gasPriceGwei: 1,
             gasLimit: 15000000
         });
-        AbstractDeployer.GovernorConfig memory fastL2Config = deployer
-            ._convertTimeBasedGovernorConfig(config, fastL2Network);
+        AbstractDeployer.GovernorConfig memory fastL2Config =
+            deployer._convertTimeBasedGovernorConfig(config, fastL2Network);
         assertEq(fastL2Config.lateQuorumExtension, 10800); // 6 hours = 21600s = 10800 blocks
     }
 
@@ -295,14 +280,13 @@ contract TimeBasedTests is TestHelper {
             300 // 1 hour in 12s blocks
         );
 
-        Deploy.TimeBasedGovernorConfig memory config = Deploy
-            .TimeBasedGovernorConfig({
-                name: "Event Test Governor",
-                votingDelayTime: "1 day",
-                votingPeriodTime: "1 week",
-                lateQuorumExtensionTime: "1 hour",
-                quorumNumerator: 500
-            });
+        Deploy.TimeBasedGovernorConfig memory config = Deploy.TimeBasedGovernorConfig({
+            name: "Event Test Governor",
+            votingDelayTime: "1 day",
+            votingPeriodTime: "1 week",
+            lateQuorumExtensionTime: "1 hour",
+            quorumNumerator: 500
+        });
 
         Deploy.NetworkConfig memory networkConfig = Deploy.NetworkConfig({
             description: "Ethereum Mainnet",
@@ -381,52 +365,20 @@ contract TimeBasedTests is TestHelper {
     function testRealisticDeploymentTiming() public {
         // Test realistic DAO governance scenarios
         TimeTestCase[] memory realisticCases = new TimeTestCase[](5);
-        realisticCases[0] = TimeTestCase(
-            "2 days",
-            172800,
-            "Standard voting delay"
-        );
-        realisticCases[1] = TimeTestCase(
-            "1 week",
-            604800,
-            "Standard voting period"
-        );
-        realisticCases[2] = TimeTestCase(
-            "6 hours",
-            21600,
-            "Late quorum extension"
-        );
-        realisticCases[3] = TimeTestCase(
-            "3 days",
-            259200,
-            "Extended voting delay"
-        );
-        realisticCases[4] = TimeTestCase(
-            "2 weeks",
-            1209600,
-            "Extended voting period"
-        );
+        realisticCases[0] = TimeTestCase("2 days", 172800, "Standard voting delay");
+        realisticCases[1] = TimeTestCase("1 week", 604800, "Standard voting period");
+        realisticCases[2] = TimeTestCase("6 hours", 21600, "Late quorum extension");
+        realisticCases[3] = TimeTestCase("3 days", 259200, "Extended voting delay");
+        realisticCases[4] = TimeTestCase("2 weeks", 1209600, "Extended voting period");
 
         uint256 blockTimeMs = ETHEREUM_BLOCK_TIME_MS;
 
         for (uint256 i = 0; i < realisticCases.length; i++) {
             TimeTestCase memory testCase = realisticCases[i];
-            uint256 expectedBlocks = (testCase.expectedSeconds *
-                1000 +
-                blockTimeMs -
-                1) / blockTimeMs; // ceiling division
-            uint256 actualBlocks = deployer._parseTimeToBlocks(
-                testCase.timeString,
-                blockTimeMs
-            );
+            uint256 expectedBlocks = (testCase.expectedSeconds * 1000 + blockTimeMs - 1) / blockTimeMs; // ceiling division
+            uint256 actualBlocks = deployer._parseTimeToBlocks(testCase.timeString, blockTimeMs);
 
-            assertEq(
-                actualBlocks,
-                expectedBlocks,
-                string(
-                    abi.encodePacked("Failed for case: ", testCase.description)
-                )
-            );
+            assertEq(actualBlocks, expectedBlocks, string(abi.encodePacked("Failed for case: ", testCase.description)));
         }
     }
 
@@ -446,10 +398,7 @@ contract TimeBasedTests is TestHelper {
         assertEq(deployer._parseTimeToBlocks("1 day", blockTimeMs), 86400);
         assertEq(deployer._parseTimeToBlocks("7 days", blockTimeMs), 604800);
         assertEq(deployer._parseTimeToBlocks("24 hours", blockTimeMs), 86400);
-        assertEq(
-            deployer._parseTimeToBlocks("1440 minutes", blockTimeMs),
-            86400
-        );
+        assertEq(deployer._parseTimeToBlocks("1440 minutes", blockTimeMs), 86400);
     }
 
     /**
@@ -458,41 +407,18 @@ contract TimeBasedTests is TestHelper {
     function testRealisticGovernanceScenarios() public {
         // Test a realistic DAO configuration across different networks
         ConversionTestCase[] memory scenarios = new ConversionTestCase[](3);
-        scenarios[0] = ConversionTestCase(
-            "2 days",
-            ETHEREUM_BLOCK_TIME_MS,
-            14400,
-            "Ethereum 2-day voting delay"
-        );
-        scenarios[1] = ConversionTestCase(
-            "1 week",
-            2000,
-            302400,
-            "Fast L2 1-week voting period"
-        );
-        scenarios[2] = ConversionTestCase(
-            "6 hours",
-            LOCALHOST_BLOCK_TIME_MS,
-            21600,
-            "Fast network 6-hour extension"
-        );
+        scenarios[0] = ConversionTestCase("2 days", ETHEREUM_BLOCK_TIME_MS, 14400, "Ethereum 2-day voting delay");
+        scenarios[1] = ConversionTestCase("1 week", 2000, 302400, "Fast L2 1-week voting period");
+        scenarios[2] = ConversionTestCase("6 hours", LOCALHOST_BLOCK_TIME_MS, 21600, "Fast network 6-hour extension");
 
         for (uint256 i = 0; i < scenarios.length; i++) {
             ConversionTestCase memory scenario = scenarios[i];
-            uint256 actualBlocks = deployer._parseTimeToBlocks(
-                scenario.timeString,
-                scenario.blockTimeMs
-            );
+            uint256 actualBlocks = deployer._parseTimeToBlocks(scenario.timeString, scenario.blockTimeMs);
 
             assertEq(
                 actualBlocks,
                 scenario.expectedBlocks,
-                string(
-                    abi.encodePacked(
-                        "Failed for scenario: ",
-                        scenario.description
-                    )
-                )
+                string(abi.encodePacked("Failed for scenario: ", scenario.description))
             );
         }
     }
@@ -514,26 +440,15 @@ contract TimeBasedTests is TestHelper {
 
         for (uint256 i = 0; i < blockTimes.length; i++) {
             uint256 blockTimeMs = blockTimes[i];
-            uint256 blocks = deployer._parseTimeToBlocks(
-                timeString,
-                blockTimeMs
-            );
+            uint256 blocks = deployer._parseTimeToBlocks(timeString, blockTimeMs);
             uint256 convertedSeconds = (blocks * blockTimeMs) / 1000;
 
             // The converted time should be >= original time (due to ceiling)
-            assertGe(
-                convertedSeconds,
-                expectedSeconds,
-                "Converted time should not be less than original"
-            );
+            assertGe(convertedSeconds, expectedSeconds, "Converted time should not be less than original");
 
             // The difference should be less than one block time
             uint256 blockTimeSeconds = blockTimeMs / 1000;
-            assertLt(
-                convertedSeconds - expectedSeconds,
-                blockTimeSeconds,
-                "Difference should be less than one block"
-            );
+            assertLt(convertedSeconds - expectedSeconds, blockTimeSeconds, "Difference should be less than one block");
         }
     }
 }

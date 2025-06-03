@@ -34,8 +34,8 @@ contract TokenSplitterTest is TestHelper {
         splitter.updatePayees(packedPayeesData);
 
         // Give tokens to the owner for testing
-        token1.transfer(owner, 10000 * 10**18);
-        token2.transfer(owner, 10000 * 10**18);
+        token1.transfer(owner, 10000 * 10 ** 18);
+        token2.transfer(owner, 10000 * 10 ** 18);
     }
 
     function testInitialSetup() public view {
@@ -106,7 +106,7 @@ contract TokenSplitterTest is TestHelper {
     }
 
     function testPermissionlessSplit() public {
-        uint256 amount = 1000 * 10**18;
+        uint256 amount = 1000 * 10 ** 18;
 
         // Owner approves splitter to transfer tokens
         vm.prank(owner);
@@ -117,28 +117,28 @@ contract TokenSplitterTest is TestHelper {
         splitter.splitToken(address(token1), amount, packedPayeesData);
 
         // Verify balances - tokens should come from owner, not caller
-        assertEq(token1.balanceOf(PAYEE1), 600 * 10**18);
-        assertEq(token1.balanceOf(PAYEE2), 400 * 10**18);
-        assertEq(token1.balanceOf(owner), 9000 * 10**18); // Owner's balance reduced
+        assertEq(token1.balanceOf(PAYEE1), 600 * 10 ** 18);
+        assertEq(token1.balanceOf(PAYEE2), 400 * 10 ** 18);
+        assertEq(token1.balanceOf(owner), 9000 * 10 ** 18); // Owner's balance reduced
     }
 
     function testSplitToken() public {
-        uint256 amount = 1000 * 10**18;
+        uint256 amount = 1000 * 10 ** 18;
 
         // Owner approves splitter to transfer tokens
         vm.prank(owner);
         token1.approve(address(splitter), amount);
 
-        expectEmitTokensReleased(address(token1), PAYEE1, 600 * 10**18); // 60%
-        expectEmitTokensReleased(address(token1), PAYEE2, 400 * 10**18); // 40%
+        expectEmitTokensReleased(address(token1), PAYEE1, 600 * 10 ** 18); // 60%
+        expectEmitTokensReleased(address(token1), PAYEE2, 400 * 10 ** 18); // 40%
         expectEmitTokensSplit(address(token1), amount);
 
         splitter.splitToken(address(token1), amount, packedPayeesData);
 
         // Verify balances - tokens transferred from owner to payees
-        assertEq(token1.balanceOf(PAYEE1), 600 * 10**18);
-        assertEq(token1.balanceOf(PAYEE2), 400 * 10**18);
-        assertEq(token1.balanceOf(owner), 9000 * 10**18); // Owner's balance reduced
+        assertEq(token1.balanceOf(PAYEE1), 600 * 10 ** 18);
+        assertEq(token1.balanceOf(PAYEE2), 400 * 10 ** 18);
+        assertEq(token1.balanceOf(owner), 9000 * 10 ** 18); // Owner's balance reduced
     }
 
     function testSplitTokenValidation() public {
@@ -178,12 +178,12 @@ contract TokenSplitterTest is TestHelper {
     }
 
     function testCalculateSplit() public view {
-        uint256 amount = 1000 * 10**18;
+        uint256 amount = 1000 * 10 ** 18;
         uint256[] memory expectedAmounts = splitter.calculateSplit(amount, packedPayeesData);
 
         assertEq(expectedAmounts.length, 2);
-        assertEq(expectedAmounts[0], 600 * 10**18); // 60%
-        assertEq(expectedAmounts[1], 400 * 10**18); // 40%
+        assertEq(expectedAmounts[0], 600 * 10 ** 18); // 60%
+        assertEq(expectedAmounts[1], 400 * 10 ** 18); // 40%
 
         // Test with amount that has rounding
         uint256[] memory roundingAmounts = splitter.calculateSplit(1001, packedPayeesData);
@@ -193,8 +193,8 @@ contract TokenSplitterTest is TestHelper {
     }
 
     function testMultipleTokenSplits() public {
-        uint256 amount1 = 1000 * 10**18;
-        uint256 amount2 = 2000 * 10**18;
+        uint256 amount1 = 1000 * 10 ** 18;
+        uint256 amount2 = 2000 * 10 ** 18;
 
         // Owner approves and split token1
         vm.prank(owner);
@@ -207,12 +207,12 @@ contract TokenSplitterTest is TestHelper {
         splitter.splitToken(address(token2), amount2, packedPayeesData);
 
         // Verify token1 balances
-        assertEq(token1.balanceOf(PAYEE1), 600 * 10**18); // 60%
-        assertEq(token1.balanceOf(PAYEE2), 400 * 10**18); // 40%
+        assertEq(token1.balanceOf(PAYEE1), 600 * 10 ** 18); // 60%
+        assertEq(token1.balanceOf(PAYEE2), 400 * 10 ** 18); // 40%
 
         // Verify token2 balances
-        assertEq(token2.balanceOf(PAYEE1), 1200 * 10**18); // 60%
-        assertEq(token2.balanceOf(PAYEE2), 800 * 10**18);  // 40%
+        assertEq(token2.balanceOf(PAYEE1), 1200 * 10 ** 18); // 60%
+        assertEq(token2.balanceOf(PAYEE2), 800 * 10 ** 18); // 40%
     }
 
     function testThreeWaySplit() public {
@@ -229,7 +229,7 @@ contract TokenSplitterTest is TestHelper {
         vm.prank(threeWayOwner);
         threeWaySplitter.updatePayees(threeWayData);
 
-        uint256 amount = 10000 * 10**18;
+        uint256 amount = 10000 * 10 ** 18;
         token1.transfer(threeWayOwner, amount);
 
         vm.prank(threeWayOwner);
@@ -237,9 +237,9 @@ contract TokenSplitterTest is TestHelper {
 
         threeWaySplitter.splitToken(address(token1), amount, threeWayData);
 
-        assertEq(token1.balanceOf(PAYEE1), 5000 * 10**18); // 50%
-        assertEq(token1.balanceOf(PAYEE2), 3000 * 10**18); // 30%
-        assertEq(token1.balanceOf(PAYEE3), 2000 * 10**18); // 20%
+        assertEq(token1.balanceOf(PAYEE1), 5000 * 10 ** 18); // 50%
+        assertEq(token1.balanceOf(PAYEE2), 3000 * 10 ** 18); // 30%
+        assertEq(token1.balanceOf(PAYEE3), 2000 * 10 ** 18); // 20%
     }
 
     function testUpdatePayees() public {
@@ -274,13 +274,13 @@ contract TokenSplitterTest is TestHelper {
         assertEq(shares2, 7000);
 
         // Test split with new configuration
-        uint256 amount = 1000 * 10**18;
+        uint256 amount = 1000 * 10 ** 18;
         vm.prank(owner);
         token1.approve(address(splitter), amount);
         splitter.splitToken(address(token1), amount, newPackedData);
 
-        assertEq(token1.balanceOf(PAYEE2), 300 * 10**18); // 30%
-        assertEq(token1.balanceOf(PAYEE3), 700 * 10**18); // 70%
+        assertEq(token1.balanceOf(PAYEE2), 300 * 10 ** 18); // 30%
+        assertEq(token1.balanceOf(PAYEE3), 700 * 10 ** 18); // 70%
     }
 
     function testCalculatePayeesHashView() public view {
@@ -310,11 +310,13 @@ contract TokenSplitterTest is TestHelper {
         bytes memory packedData1 = splitter.createPackedPayeesData(payees1);
         bytes memory packedData2 = splitter.createPackedPayeesData(payees2);
 
-        assertEq(keccak256(packedData1), keccak256(packedData2), "Packed data should be identical regardless of input order");
+        assertEq(
+            keccak256(packedData1), keccak256(packedData2), "Packed data should be identical regardless of input order"
+        );
     }
 
     function testInsufficientAllowanceFromOwner() public {
-        uint256 amount = 1000 * 10**18;
+        uint256 amount = 1000 * 10 ** 18;
 
         // Owner only approves half the amount needed
         vm.prank(owner);
@@ -326,7 +328,7 @@ contract TokenSplitterTest is TestHelper {
     }
 
     function testOwnerHasInsufficientBalance() public {
-        uint256 amount = 20000 * 10**18; // More than owner has
+        uint256 amount = 20000 * 10 ** 18; // More than owner has
 
         // Owner approves the full amount but doesn't have enough tokens
         vm.prank(owner);
@@ -338,8 +340,8 @@ contract TokenSplitterTest is TestHelper {
     }
 
     function testMultipleCallersCanSplit() public {
-        uint256 amount1 = 1000 * 10**18;
-        uint256 amount2 = 500 * 10**18;
+        uint256 amount1 = 1000 * 10 ** 18;
+        uint256 amount2 = 500 * 10 ** 18;
 
         // Owner approves total amount
         vm.prank(owner);
@@ -354,13 +356,13 @@ contract TokenSplitterTest is TestHelper {
         splitter.splitToken(address(token1), amount2, packedPayeesData);
 
         // Verify total distributions
-        assertEq(token1.balanceOf(PAYEE1), 600 * 10**18 + 300 * 10**18); // 60% of both splits
-        assertEq(token1.balanceOf(PAYEE2), 400 * 10**18 + 200 * 10**18); // 40% of both splits
-        assertEq(token1.balanceOf(owner), 10000 * 10**18 - amount1 - amount2); // Owner's remaining balance
+        assertEq(token1.balanceOf(PAYEE1), 600 * 10 ** 18 + 300 * 10 ** 18); // 60% of both splits
+        assertEq(token1.balanceOf(PAYEE2), 400 * 10 ** 18 + 200 * 10 ** 18); // 40% of both splits
+        assertEq(token1.balanceOf(owner), 10000 * 10 ** 18 - amount1 - amount2); // Owner's remaining balance
     }
 
     function testOwnerCannotSplitWithoutApproval() public {
-        uint256 amount = 1000 * 10**18;
+        uint256 amount = 1000 * 10 ** 18;
 
         // Owner tries to split without approving the contract first
         vm.prank(owner);

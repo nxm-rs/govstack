@@ -28,39 +28,26 @@ contract TokenGovernor is
         Governor(name)
         GovernorVotes(IVotes(token))
         GovernorVotesQuorumFraction(quorumNumerator)
-        GovernorSettings(
-            uint48(initialVotingDelay),
-            uint32(initialVotingPeriod),
-            0
-        )
+        GovernorSettings(uint48(initialVotingDelay), uint32(initialVotingPeriod), 0)
         GovernorPreventLateQuorum(lateQuorumExtension)
     {}
 
     /**
      * @dev Override to resolve conflict between Governor and GovernorSettings
      */
-    function proposalThreshold()
-        public
-        view
-        override(Governor, GovernorSettings)
-        returns (uint256)
-    {
+    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
         return GovernorSettings.proposalThreshold();
     }
 
     /**
      * @dev Override to resolve conflict between Governor and GovernorPreventLateQuorum
      */
-    function _tallyUpdated(
-        uint256 proposalId
-    ) internal override(Governor, GovernorPreventLateQuorum) {
+    function _tallyUpdated(uint256 proposalId) internal override(Governor, GovernorPreventLateQuorum) {
         GovernorPreventLateQuorum._tallyUpdated(proposalId);
     }
 
     /// @dev Override to resolve conflict between Governor and GovernorPreventLateQuorum
-    function proposalDeadline(
-        uint256 proposalId
-    )
+    function proposalDeadline(uint256 proposalId)
         public
         view
         override(Governor, GovernorPreventLateQuorum)

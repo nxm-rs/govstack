@@ -15,10 +15,7 @@ contract ForwarderFactory {
 
     /// @notice Event emitted when a new forwarder is deployed
     event ForwarderDeployed(
-        address indexed implementation,
-        address indexed mainnetRecipient,
-        address indexed forwarder,
-        bytes32 salt
+        address indexed implementation, address indexed mainnetRecipient, address indexed forwarder, bytes32 salt
     );
 
     /// @notice Error thrown when forwarder already exists
@@ -31,10 +28,10 @@ contract ForwarderFactory {
     /// @param implementation The forwarder implementation contract address
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return forwarder The address of the deployed forwarder contract
-    function deployForwarder(
-        address implementation,
-        address mainnetRecipient
-    ) external returns (address payable forwarder) {
+    function deployForwarder(address implementation, address mainnetRecipient)
+        external
+        returns (address payable forwarder)
+    {
         require(implementation != address(0), "Invalid implementation");
         require(mainnetRecipient != address(0), "Invalid recipient");
 
@@ -67,13 +64,14 @@ contract ForwarderFactory {
     /// @param implementation The forwarder implementation contract address
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return The predicted address of the forwarder contract
-    function predictForwarderAddress(
-        address implementation,
-        address mainnetRecipient
-    ) external view returns (address) {
+    function predictForwarderAddress(address implementation, address mainnetRecipient)
+        external
+        view
+        returns (address)
+    {
         bytes32 salt = keccak256(abi.encodePacked(mainnetRecipient));
         bytes memory initData = abi.encodeWithSignature("initialize(address)", mainnetRecipient);
-        
+
         return LibClone.predictDeterministicAddress(implementation, initData, salt, address(this));
     }
 
@@ -81,10 +79,7 @@ contract ForwarderFactory {
     /// @param implementation The forwarder implementation contract address
     /// @param mainnetRecipient The mainnet address
     /// @return The forwarder address, or address(0) if not deployed
-    function getForwarder(
-        address implementation,
-        address mainnetRecipient
-    ) external view returns (address) {
+    function getForwarder(address implementation, address mainnetRecipient) external view returns (address) {
         return forwarders[implementation][mainnetRecipient];
     }
 
@@ -92,10 +87,7 @@ contract ForwarderFactory {
     /// @param implementation The forwarder implementation contract address
     /// @param mainnetRecipient The mainnet address
     /// @return True if the forwarder exists
-    function forwarderExists(
-        address implementation,
-        address mainnetRecipient
-    ) external view returns (bool) {
+    function forwarderExists(address implementation, address mainnetRecipient) external view returns (bool) {
         return forwarders[implementation][mainnetRecipient] != address(0);
     }
 
@@ -103,12 +95,12 @@ contract ForwarderFactory {
     /// @param implementation The forwarder implementation contract address
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return forwarder The address of the forwarder contract
-    function getOrDeployForwarder(
-        address implementation,
-        address mainnetRecipient
-    ) external returns (address payable forwarder) {
+    function getOrDeployForwarder(address implementation, address mainnetRecipient)
+        external
+        returns (address payable forwarder)
+    {
         forwarder = payable(forwarders[implementation][mainnetRecipient]);
-        
+
         if (forwarder == address(0)) {
             forwarder = this.deployForwarder(implementation, mainnetRecipient);
         }
@@ -118,14 +110,14 @@ contract ForwarderFactory {
     /// @param implementations Array of implementation addresses
     /// @param mainnetRecipients Array of mainnet recipient addresses
     /// @return forwarderAddresses Array of deployed forwarder addresses
-    function batchDeployForwarders(
-        address[] calldata implementations,
-        address[] calldata mainnetRecipients
-    ) external returns (address payable[] memory forwarderAddresses) {
+    function batchDeployForwarders(address[] calldata implementations, address[] calldata mainnetRecipients)
+        external
+        returns (address payable[] memory forwarderAddresses)
+    {
         require(implementations.length == mainnetRecipients.length, "Array length mismatch");
-        
+
         forwarderAddresses = new address payable[](implementations.length);
-        
+
         for (uint256 i = 0; i < implementations.length; i++) {
             forwarderAddresses[i] = this.deployForwarder(implementations[i], mainnetRecipients[i]);
         }
@@ -135,10 +127,10 @@ contract ForwarderFactory {
     /// @param implementation The forwarder implementation contract address
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return forwarder The address of the deployed forwarder contract
-    function deployForwarderDirect(
-        address implementation,
-        address mainnetRecipient
-    ) external returns (address payable forwarder) {
+    function deployForwarderDirect(address implementation, address mainnetRecipient)
+        external
+        returns (address payable forwarder)
+    {
         require(implementation != address(0), "Invalid implementation");
         require(mainnetRecipient != address(0), "Invalid recipient");
 
@@ -168,12 +160,13 @@ contract ForwarderFactory {
     /// @param implementation The forwarder implementation contract address
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return The predicted address of the forwarder contract
-    function predictForwarderAddressDirect(
-        address implementation,
-        address mainnetRecipient
-    ) external view returns (address) {
+    function predictForwarderAddressDirect(address implementation, address mainnetRecipient)
+        external
+        view
+        returns (address)
+    {
         bytes32 salt = keccak256(abi.encodePacked(mainnetRecipient));
-        
+
         return LibClone.predictDeterministicAddress(implementation, salt, address(this));
     }
 }

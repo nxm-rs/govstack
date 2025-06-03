@@ -9,12 +9,7 @@ contract Token is ERC20Votes, Ownable {
     string private _name;
     string private _symbol;
 
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        uint256 initialSupply,
-        address owner_
-    ) ERC20Votes() {
+    constructor(string memory name_, string memory symbol_, uint256 initialSupply, address owner_) ERC20Votes() {
         _name = name_;
         _symbol = symbol_;
         _initializeOwner(owner_);
@@ -60,9 +55,7 @@ contract Token is ERC20Votes, Ownable {
     /**
      * @dev Required as ERC20Votes from solady differs to IVotes from OpenZeppelin
      */
-    function getPastTotalSupply(
-        uint256 timepoint
-    ) public view returns (uint256) {
+    function getPastTotalSupply(uint256 timepoint) public view returns (uint256) {
         return getPastVotesTotalSupply(timepoint);
     }
 }

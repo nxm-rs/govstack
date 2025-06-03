@@ -41,15 +41,15 @@ contract GnosisChainForwarder is Forwarder {
     function initialize(address _mainnetRecipient) external override {
         // Verify we're on Gnosis Chain
         if (block.chainid != GNOSIS_CHAIN_ID) revert InvalidChain();
-        
+
         // Check if already initialized
         if (initialized) revert AlreadyInitialized();
         require(_mainnetRecipient != address(0), "Invalid recipient");
-        
+
         // Set state variables
         mainnetRecipient = _mainnetRecipient;
         initialized = true;
-        
+
         emit Initialized(_mainnetRecipient);
     }
 
@@ -70,9 +70,8 @@ contract GnosisChainForwarder is Forwarder {
 
         // Bridge tokens via Omnibridge
         // The Omnibridge relayTokens function signature: relayTokens(address token, address receiver, uint256 value)
-        (bool success, ) = OMNIBRIDGE.call(
-            abi.encodeWithSignature("relayTokens(address,address,uint256)", token, recipient, amount)
-        );
+        (bool success,) =
+            OMNIBRIDGE.call(abi.encodeWithSignature("relayTokens(address,address,uint256)", token, recipient, amount));
 
         if (!success) {
             // Reset approval on failure
@@ -90,9 +89,7 @@ contract GnosisChainForwarder is Forwarder {
     function _bridgeNative(uint256 amount, address recipient) internal override {
         // Bridge native tokens via xDAI bridge
         // The xDAI bridge relayTokens function for native tokens
-        (bool success, ) = XDAI_BRIDGE.call{value: amount}(
-            abi.encodeWithSignature("relayTokens(address)", recipient)
-        );
+        (bool success,) = XDAI_BRIDGE.call{value: amount}(abi.encodeWithSignature("relayTokens(address)", recipient));
 
         if (!success) revert BridgeCallFailed();
 

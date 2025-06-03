@@ -50,10 +50,10 @@ abstract contract Forwarder {
     function initialize(address _mainnetRecipient) external virtual {
         if (initialized) revert AlreadyInitialized();
         require(_mainnetRecipient != address(0), "Invalid recipient");
-        
+
         mainnetRecipient = _mainnetRecipient;
         initialized = true;
-        
+
         emit Initialized(_mainnetRecipient);
     }
 
@@ -68,9 +68,9 @@ abstract contract Forwarder {
     function forwardToken(address token) external onlyInitialized {
         uint256 balance = ERC20(token).balanceOf(address(this));
         if (balance == 0) revert ZeroAmount();
-        
+
         _bridgeToken(token, balance, mainnetRecipient);
-        
+
         emit TokensForwarded(token, balance, mainnetRecipient);
     }
 
@@ -79,12 +79,12 @@ abstract contract Forwarder {
     /// @param amount The amount of tokens to forward
     function forwardToken(address token, uint256 amount) external onlyInitialized {
         if (amount == 0) revert ZeroAmount();
-        
+
         uint256 balance = ERC20(token).balanceOf(address(this));
         require(balance >= amount, "Insufficient balance");
-        
+
         _bridgeToken(token, amount, mainnetRecipient);
-        
+
         emit TokensForwarded(token, amount, mainnetRecipient);
     }
 
@@ -92,9 +92,9 @@ abstract contract Forwarder {
     function forwardNative() external onlyInitialized {
         uint256 balance = address(this).balance;
         if (balance == 0) revert ZeroAmount();
-        
+
         _bridgeNative(balance, mainnetRecipient);
-        
+
         emit NativeForwarded(balance, mainnetRecipient);
     }
 
@@ -103,9 +103,9 @@ abstract contract Forwarder {
     function forwardNative(uint256 amount) external onlyInitialized {
         if (amount == 0) revert ZeroAmount();
         require(address(this).balance >= amount, "Insufficient balance");
-        
+
         _bridgeNative(amount, mainnetRecipient);
-        
+
         emit NativeForwarded(amount, mainnetRecipient);
     }
 
