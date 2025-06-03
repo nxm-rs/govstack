@@ -6,14 +6,39 @@ import "../src/Token.sol";
 import "../src/Governor.sol";
 import "../src/TokenSplitter.sol";
 import "../src/Deployer.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
-// Mock ERC20 for testing
-contract MockERC20 is Token {
-    constructor(string memory name, string memory symbol) Token(name, symbol, 1000000 * 10 ** 18, msg.sender) {}
+/// @title TestERC20
+/// @notice Simple ERC20 token for testing
+contract TestERC20 is ERC20 {
+    string private _name;
+    string private _symbol;
 
-    function mint(address to, uint256 amount) external override {
+    constructor(string memory name_, string memory symbol_) {
+        _name = name_;
+        _symbol = symbol_;
+    }
+
+    function name() public view override returns (string memory) {
+        return _name;
+    }
+
+    function symbol() public view override returns (string memory) {
+        return _symbol;
+    }
+
+    function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
+}
+
+/// @title IMockTarget
+/// @notice Interface for MockTarget contract
+interface IMockTarget {
+    function setValue(uint256 _value) external;
+    function reset() external;
+    function value() external view returns (uint256);
+    function executed() external view returns (bool);
 }
 
 // Mock contract for testing governance proposals
@@ -99,8 +124,8 @@ contract TestHelper is Test {
         });
     }
 
-    function deployMockToken() internal returns (MockERC20) {
-        return new MockERC20("Mock Token", "MOCK");
+    function deployMockToken() internal returns (TestERC20) {
+        return new TestERC20("Mock Token", "MOCK");
     }
 
     function expectEmitTokensReleased(address token, address to, uint256 amount) internal {
@@ -381,8 +406,8 @@ contract TestHelper is Test {
     event ProposalExecuted(uint256 proposalId);
 
     // Helper to setup common test scenario
-    function setupBasicSplitter() internal returns (TokenSplitter, MockERC20) {
-        MockERC20 token = deployMockToken();
+    function setupBasicSplitter() internal returns (TokenSplitter, TestERC20) {
+        TestERC20 token = deployMockToken();
 
         TokenSplitter splitter = new TokenSplitter(OWNER);
 

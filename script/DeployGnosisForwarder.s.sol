@@ -2,8 +2,8 @@
 pragma solidity ^0.8.30;
 
 import "forge-std/Script.sol";
-import "../src/forwarders/GnosisChainForwarder.sol";
-import "../src/ForwarderFactory.sol";
+import "../src/forwarders/gnosis/GnosisChainForwarder.sol";
+import "../src/forwarders/gnosis/GnosisChainForwarderFactory.sol";
 
 /// @title DeployGnosisForwarder
 /// @notice Deployment script for GnosisChainForwarder on Gnosis Chain using LibClone
@@ -14,7 +14,7 @@ contract DeployGnosisForwarder is Script {
     /// @notice Event emitted when deployment is complete
     event DeploymentComplete(address indexed implementation, address indexed factory, uint256 chainId);
 
-    /// @notice Deploy the GnosisChainForwarder implementation and factory
+    /// @notice Deploy the ForwarderFactory (which deploys its own implementation)
     function run() external {
         // Verify we're deploying on Gnosis Chain
         require(block.chainid == GNOSIS_CHAIN_ID, "Must deploy on Gnosis Chain");
@@ -22,19 +22,19 @@ contract DeployGnosisForwarder is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
-        console.log("Deploying GnosisChainForwarder...");
+        console.log("Deploying ForwarderFactory with embedded implementation...");
         console.log("Deployer:", deployer);
         console.log("Chain ID:", block.chainid);
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy the implementation contract (no constructor args needed)
-        GnosisChainForwarder implementation = new GnosisChainForwarder();
-        console.log("GnosisChainForwarder implementation deployed at:", address(implementation));
-
-        // Deploy the factory contract
-        ForwarderFactory factory = new ForwarderFactory();
+        // Deploy the factory contract (which will deploy its own implementation)
+        GnosisChainForwarderFactory factory = new GnosisChainForwarderFactory();
         console.log("ForwarderFactory deployed at:", address(factory));
+
+        // Get the implementation address that was deployed by the factory
+        address implementation = factory.getImplementation();
+        console.log("GnosisChainForwarder implementation deployed at:", implementation);
 
         vm.stopBroadcast();
 
@@ -48,18 +48,19 @@ contract DeployGnosisForwarder is Script {
     }
 
     /// @notice Deploy a specific forwarder instance for a mainnet recipient
-    /// @param implementationAddress The deployed implementation address
     /// @param factoryAddress The deployed factory address
     /// @param mainnetRecipient The mainnet address that will receive tokens
-    function deployForwarderInstance(address implementationAddress, address factoryAddress, address mainnetRecipient)
+    function deployForwarderInstance(address factoryAddress, address mainnetRecipient)
         external
     {
         require(block.chainid == GNOSIS_CHAIN_ID, "Must deploy on Gnosis Chain");
-        require(implementationAddress != address(0), "Invalid implementation");
         require(factoryAddress != address(0), "Invalid factory");
         require(mainnetRecipient != address(0), "Invalid recipient");
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+
+        GnosisChainForwarderFactory factory = GnosisChainForwarderFactory(factoryAddress);
+        address implementationAddress = factory.getImplementation();
 
         console.log("Deploying forwarder instance...");
         console.log("Implementation:", implementationAddress);
@@ -68,14 +69,12 @@ contract DeployGnosisForwarder is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ForwarderFactory factory = ForwarderFactory(factoryAddress);
-
         // Predict the forwarder address using the direct method
-        address predictedAddress = factory.predictForwarderAddressDirect(implementationAddress, mainnetRecipient);
+        address predictedAddress = factory.predictForwarderAddressDirect(mainnetRecipient);
         console.log("Predicted forwarder address:", predictedAddress);
 
-        // Deploy the forwarder using the direct method (recommended)
-        address forwarderAddress = factory.deployForwarderDirect(implementationAddress, mainnetRecipient);
+        // Deploy the forwarder using the direct method
+        address forwarderAddress = factory.deployForwarderDirect(mainnetRecipient);
         console.log("Deployed forwarder address:", forwarderAddress);
 
         // Verify the addresses match
@@ -90,20 +89,20 @@ contract DeployGnosisForwarder is Script {
     }
 
     /// @notice Deploy multiple forwarder instances for different recipients
-    /// @param implementationAddress The deployed implementation address
     /// @param factoryAddress The deployed factory address
     /// @param mainnetRecipients Array of mainnet addresses that will receive tokens
     function deployMultipleForwarders(
-        address implementationAddress,
         address factoryAddress,
         address[] calldata mainnetRecipients
     ) external {
         require(block.chainid == GNOSIS_CHAIN_ID, "Must deploy on Gnosis Chain");
-        require(implementationAddress != address(0), "Invalid implementation");
         require(factoryAddress != address(0), "Invalid factory");
         require(mainnetRecipients.length > 0, "No recipients provided");
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+
+        GnosisChainForwarderFactory factory = GnosisChainForwarderFactory(factoryAddress);
+        address implementationAddress = factory.getImplementation();
 
         console.log("Deploying multiple forwarder instances...");
         console.log("Implementation:", implementationAddress);
@@ -112,8 +111,6 @@ contract DeployGnosisForwarder is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        ForwarderFactory factory = ForwarderFactory(factoryAddress);
-
         for (uint256 i = 0; i < mainnetRecipients.length; i++) {
             address recipient = mainnetRecipients[i];
             require(recipient != address(0), "Invalid recipient");
@@ -121,13 +118,13 @@ contract DeployGnosisForwarder is Script {
             console.log("Deploying forwarder for recipient:", recipient);
 
             // Check if already deployed
-            if (factory.forwarderExists(implementationAddress, recipient)) {
+            if (factory.forwarderExists(recipient)) {
                 console.log("Forwarder already exists for recipient:", recipient);
                 continue;
             }
 
             // Deploy the forwarder
-            address forwarderAddress = factory.deployForwarderDirect(implementationAddress, recipient);
+            address forwarderAddress = factory.deployForwarderDirect(recipient);
             console.log("Deployed forwarder at:", forwarderAddress);
         }
 
@@ -139,91 +136,40 @@ contract DeployGnosisForwarder is Script {
     /// @notice Get deployment addresses from environment or previous deployment
     function getDeploymentAddresses() external view returns (address implementation, address factory) {
         // Try to get from environment variables
-        try vm.envAddress("GNOSIS_FORWARDER_IMPL") returns (address impl) {
-            implementation = impl;
-        } catch {
-            console.log("GNOSIS_FORWARDER_IMPL not set");
-        }
-
         try vm.envAddress("GNOSIS_FORWARDER_FACTORY") returns (address fact) {
             factory = fact;
+            if (factory != address(0)) {
+                implementation = GnosisChainForwarderFactory(factory).getImplementation();
+            }
         } catch {
             console.log("GNOSIS_FORWARDER_FACTORY not set");
         }
     }
 
     /// @notice Verify deployment on Gnosis Chain
-    function verifyDeployment(address implementationAddress, address factoryAddress) external view {
+    function verifyDeployment(address factoryAddress) external view {
         require(block.chainid == GNOSIS_CHAIN_ID, "Must verify on Gnosis Chain");
 
         console.log("Verifying deployment...");
 
+        // Verify factory
+        GnosisChainForwarderFactory factory = GnosisChainForwarderFactory(factoryAddress);
+        address implementationAddress = factory.getImplementation();
+        require(implementationAddress != address(0), "No implementation found");
+
         // Verify implementation
         GnosisChainForwarder impl = GnosisChainForwarder(payable(implementationAddress));
-        require(impl.getChainId() == GNOSIS_CHAIN_ID, "Wrong chain for implementation");
-        require(impl.isBridgeConfigured(), "Bridge not configured");
+        require(block.chainid == GNOSIS_CHAIN_ID, "Wrong chain for implementation");
+        require(address(impl.OMNIBRIDGE()) != address(0) && address(impl.XDAI_BRIDGE()) != address(0), "Bridge not configured");
         console.log("[OK] Implementation verified");
 
-        // Verify factory
-        ForwarderFactory factory = ForwarderFactory(factoryAddress);
         // Test prediction function works
-        address testPrediction = factory.predictForwarderAddressDirect(implementationAddress, address(0x1));
+        address testPrediction = factory.predictForwarderAddressDirect(address(0x1));
         require(testPrediction != address(0), "Factory prediction failed");
         console.log("[OK] Factory verified");
 
         console.log("[OK] All verifications passed");
     }
 
-    /// @notice Test deployment by creating a test forwarder instance
-    function testDeployment(address implementationAddress, address factoryAddress) external {
-        require(block.chainid == GNOSIS_CHAIN_ID, "Must test on Gnosis Chain");
 
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address testRecipient = address(0x1234567890123456789012345678901234567890);
-
-        console.log("Testing deployment with test recipient:", testRecipient);
-
-        vm.startBroadcast(deployerPrivateKey);
-
-        ForwarderFactory factory = ForwarderFactory(factoryAddress);
-
-        // Deploy test forwarder
-        address testForwarder = factory.deployForwarderDirect(implementationAddress, testRecipient);
-
-        // Verify the forwarder is initialized correctly
-        GnosisChainForwarder forwarder = GnosisChainForwarder(payable(testForwarder));
-        require(forwarder.initialized(), "Forwarder not initialized");
-        require(forwarder.mainnetRecipient() == testRecipient, "Wrong recipient");
-        require(forwarder.getChainId() == GNOSIS_CHAIN_ID, "Wrong chain ID");
-
-        vm.stopBroadcast();
-
-        console.log("[OK] Test deployment successful");
-        console.log("Test forwarder address:", testForwarder);
-    }
-
-    /// @notice Check forwarder determinism across different deployers
-    function testDeterminism(
-        address implementationAddress,
-        address factoryAddress1,
-        address factoryAddress2,
-        address testRecipient
-    ) external view {
-        console.log("Testing address determinism...");
-
-        ForwarderFactory factory1 = ForwarderFactory(factoryAddress1);
-        ForwarderFactory factory2 = ForwarderFactory(factoryAddress2);
-
-        address predicted1 = factory1.predictForwarderAddressDirect(implementationAddress, testRecipient);
-        address predicted2 = factory2.predictForwarderAddressDirect(implementationAddress, testRecipient);
-
-        console.log("Factory 1 prediction:", predicted1);
-        console.log("Factory 2 prediction:", predicted2);
-
-        if (predicted1 == predicted2) {
-            console.log("[OK] Deterministic deployment verified");
-        } else {
-            console.log("[FAIL] Deterministic deployment failed");
-        }
-    }
 }

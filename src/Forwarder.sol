@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity ^0.8;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
@@ -22,7 +22,11 @@ abstract contract Forwarder {
     bool public initialized;
 
     /// @notice Emitted when ERC20 tokens are forwarded
-    event TokensForwarded(address indexed token, uint256 amount, address indexed recipient);
+    event TokensForwarded(
+        address indexed token,
+        uint256 amount,
+        address indexed recipient
+    );
 
     /// @notice Emitted when native tokens are forwarded
     event NativeForwarded(uint256 amount, address indexed recipient);
@@ -45,10 +49,13 @@ abstract contract Forwarder {
     /// @notice Error thrown when caller is not authorized
     error Unauthorized();
 
+    /// @notice Error thrown when contract is deployed on wrong chain
+    error InvalidChain();
+
     /// @notice Initialize the forwarder contract
     /// @param _mainnetRecipient The address on mainnet that will receive forwarded tokens
     function initialize(address _mainnetRecipient) external virtual {
-        if (initialized) revert AlreadyInitialized();
+        require(!initialized, AlreadyInitialized());
         require(_mainnetRecipient != address(0), "Invalid recipient");
 
         mainnetRecipient = _mainnetRecipient;
@@ -67,7 +74,7 @@ abstract contract Forwarder {
     /// @param token The address of the ERC20 token to forward
     function forwardToken(address token) external onlyInitialized {
         uint256 balance = ERC20(token).balanceOf(address(this));
-        if (balance == 0) revert ZeroAmount();
+        require(balance > 0, ZeroAmount());
 
         _bridgeToken(token, balance, mainnetRecipient);
 
@@ -77,8 +84,11 @@ abstract contract Forwarder {
     /// @notice Forward a specific amount of ERC20 tokens to mainnet
     /// @param token The address of the ERC20 token to forward
     /// @param amount The amount of tokens to forward
-    function forwardToken(address token, uint256 amount) external onlyInitialized {
-        if (amount == 0) revert ZeroAmount();
+    function forwardToken(
+        address token,
+        uint256 amount
+    ) external onlyInitialized {
+        require(amount > 0, ZeroAmount());
 
         uint256 balance = ERC20(token).balanceOf(address(this));
         require(balance >= amount, "Insufficient balance");
@@ -91,7 +101,7 @@ abstract contract Forwarder {
     /// @notice Forward all native token balance to mainnet
     function forwardNative() external onlyInitialized {
         uint256 balance = address(this).balance;
-        if (balance == 0) revert ZeroAmount();
+        require(balance > 0, ZeroAmount());
 
         _bridgeNative(balance, mainnetRecipient);
 
@@ -101,7 +111,7 @@ abstract contract Forwarder {
     /// @notice Forward a specific amount of native tokens to mainnet
     /// @param amount The amount of native tokens to forward
     function forwardNative(uint256 amount) external onlyInitialized {
-        if (amount == 0) revert ZeroAmount();
+        require(amount > 0, ZeroAmount());
         require(address(this).balance >= amount, "Insufficient balance");
 
         _bridgeNative(amount, mainnetRecipient);
@@ -111,7 +121,9 @@ abstract contract Forwarder {
 
     /// @notice Batch forward multiple ERC20 tokens
     /// @param tokens Array of token addresses to forward
-    function batchForwardTokens(address[] calldata tokens) external onlyInitialized {
+    function batchForwardTokens(
+        address[] calldata tokens
+    ) external onlyInitialized {
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256 balance = ERC20(tokens[i]).balanceOf(address(this));
             if (balance > 0) {
@@ -136,7 +148,11 @@ abstract contract Forwarder {
     /// @param token The token address to bridge
     /// @param amount The amount to bridge
     /// @param recipient The recipient address on mainnet
-    function _bridgeToken(address token, uint256 amount, address recipient) internal virtual;
+    function _bridgeToken(
+        address token,
+        uint256 amount,
+        address recipient
+    ) internal virtual;
 
     /// @notice Abstract function to bridge native tokens to mainnet
     /// @dev Must be implemented by concrete forwarder contracts

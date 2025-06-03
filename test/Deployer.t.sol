@@ -144,7 +144,9 @@ contract DeployerTest is TestHelper {
         AbstractDeployer.SplitterConfig memory invalidSplitterConfig =
             AbstractDeployer.SplitterConfig({packedPayeesData: invalidPackedData});
 
-        vm.expectRevert(AbstractDeployer.TotalSharesMustEqual10000.selector);
+        // Deployer should succeed, but validation will fail in TokenSplitter.updatePayees()
+        vm.recordLogs();
+        vm.expectRevert(TokenSplitter.InvalidTotalShares.selector);
         new TestableDeployer(
             createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions, OWNER
         );
@@ -154,7 +156,7 @@ contract DeployerTest is TestHelper {
 
         invalidSplitterConfig = AbstractDeployer.SplitterConfig({packedPayeesData: zeroAddressPackedData});
 
-        vm.expectRevert(AbstractDeployer.PayeeZeroAddress.selector);
+        vm.expectRevert(TokenSplitter.InvalidShares.selector);
         new TestableDeployer(
             createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions, OWNER
         );

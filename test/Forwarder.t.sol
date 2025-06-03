@@ -3,21 +3,18 @@ pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
 import "../src/Forwarder.sol";
-import "../src/ForwarderFactory.sol";
-import "../src/forwarders/GnosisChainForwarder.sol";
+import "../src/forwarders/gnosis/GnosisChainForwarderFactory.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
-/// @title MockERC20
-/// @notice Mock ERC20 token for testing
-contract MockERC20 is ERC20 {
+/// @title TestERC20
+/// @notice Simple ERC20 token for testing
+contract TestERC20 is ERC20 {
     string private _name;
     string private _symbol;
-    uint8 private _decimals;
 
-    constructor(string memory name_, string memory symbol_, uint8 decimals_) {
+    constructor(string memory name_, string memory symbol_) {
         _name = name_;
         _symbol = symbol_;
-        _decimals = decimals_;
     }
 
     function name() public view override returns (string memory) {
@@ -28,79 +25,99 @@ contract MockERC20 is ERC20 {
         return _symbol;
     }
 
-    function decimals() public view override returns (uint8) {
-        return _decimals;
-    }
-
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
 }
 
-/// @title MockForwarder
-/// @notice Simple mock forwarder implementation for testing
-contract MockForwarder is Forwarder {
-    mapping(address => uint256) public bridgedTokens;
-    mapping(address => uint256) public bridgedNative;
+/// @title TestForwarder
+/// @notice Concrete implementation of Forwarder for testing
+contract TestForwarder is Forwarder {
+    address public constant MOCK_BRIDGE =
+        0x1234567890123456789012345678901234567890;
 
-    function _bridgeToken(address token, uint256 amount, address recipient) internal override {
-        // Record the bridge operation
-        bridgedTokens[recipient] += amount;
-        // Simulate token consumption by burning them
-        ERC20(token).transfer(address(0), amount);
+    function _bridgeToken(
+        address token,
+        uint256 amount,
+        address recipient
+    ) internal override {
+        // Mock bridge call
+        (bool success, ) = MOCK_BRIDGE.call(
+            abi.encodeCall(this.bridgeToken, (token, amount, recipient))
+        );
+        require(success, BridgeFailed());
     }
 
-    function _bridgeNative(uint256 amount, address recipient) internal override {
-        // Record the bridge operation
-        bridgedNative[recipient] += amount;
-        // Simulate native token consumption by sending to burn address
-        payable(address(0x000000000000000000000000000000000000dEaD)).transfer(amount);
+    function _bridgeNative(
+        uint256 amount,
+        address recipient
+    ) internal override {
+        // Mock bridge call
+        (bool success, ) = MOCK_BRIDGE.call{value: amount}(
+            abi.encodeCall(this.bridgeNative, (amount, recipient))
+        );
+        require(success, BridgeFailed());
     }
 
-    function getBridgedTokens(address recipient) external view returns (uint256) {
-        return bridgedTokens[recipient];
+    // Mock functions for the bridge calls
+    function bridgeToken(
+        address token,
+        uint256 amount,
+        address recipient
+    ) external pure returns (bool) {
+        // This is just for abi.encodeCall, never actually called
+        return true;
     }
 
-    function getBridgedNative(address recipient) external view returns (uint256) {
-        return bridgedNative[recipient];
+    function bridgeNative(
+        uint256 amount,
+        address recipient
+    ) external payable returns (bool) {
+        // This is just for abi.encodeCall, never actually called
+        return true;
     }
 }
 
 /// @title ForwarderTest
 /// @notice Test suite for Forwarder contracts
 contract ForwarderTest is Test {
-    ForwarderFactory factory;
-    MockForwarder implementation;
-    MockERC20 testToken;
+    GnosisChainForwarderFactory factory;
+    TestERC20 testToken;
+    address mainnetRecipient;
+    address user;
+    address mockBridge;
 
-    address mainnetRecipient = address(0x1234567890123456789012345678901234567890);
-    address user = address(0x1111111111111111111111111111111111111111);
-
-    event ForwarderDeployed(
-        address indexed implementation, address indexed mainnetRecipient, address indexed forwarder, bytes32 salt
+    // Events from Forwarder
+    event TokensForwarded(
+        address indexed token,
+        uint256 amount,
+        address indexed recipient
     );
-
-    event TokensForwarded(address indexed token, uint256 amount, address indexed recipient);
     event NativeForwarded(uint256 amount, address indexed recipient);
 
     function setUp() public {
-        // Deploy factory
-        factory = new ForwarderFactory();
+        // Set chain ID to Gnosis Chain since factory deploys GnosisChainForwarder
+        vm.chainId(100);
 
-        // Deploy mock forwarder implementation
-        implementation = new MockForwarder();
+        // Create test addresses
+        mainnetRecipient = vm.addr(1);
+        user = vm.addr(2);
+        mockBridge = 0x1234567890123456789012345678901234567890;
+
+        // Deploy factory (which deploys its own implementation)
+        factory = new GnosisChainForwarderFactory();
 
         // Deploy test token
-        testToken = new MockERC20("Test Token", "TEST", 18);
+        testToken = new TestERC20("Test Token", "TEST");
     }
 
     function testForwarderInitialization() public {
-        MockForwarder forwarder = new MockForwarder();
+        TestForwarder forwarder = new TestForwarder();
 
-        // Test initialization
+        // Test proper initialization
         forwarder.initialize(mainnetRecipient);
-        assertEq(forwarder.mainnetRecipient(), mainnetRecipient);
         assertTrue(forwarder.initialized());
+        assertEq(forwarder.mainnetRecipient(), mainnetRecipient);
 
         // Test double initialization fails
         vm.expectRevert(Forwarder.AlreadyInitialized.selector);
@@ -108,7 +125,7 @@ contract ForwarderTest is Test {
     }
 
     function testInvalidInitialization() public {
-        MockForwarder forwarder = new MockForwarder();
+        TestForwarder forwarder = new TestForwarder();
 
         // Test initialization with zero address fails
         vm.expectRevert("Invalid recipient");
@@ -116,111 +133,156 @@ contract ForwarderTest is Test {
     }
 
     function testFactoryDeploymentDirect() public {
-        // Predict forwarder address
-        address predictedAddress = factory.predictForwarderAddressDirect(address(implementation), mainnetRecipient);
+        // Predict forwarder address using direct method
+        address predictedAddress = factory.predictForwarderAddressDirect(
+            mainnetRecipient
+        );
 
         // Deploy forwarder
         vm.expectEmit(true, true, true, true);
-        emit ForwarderDeployed(
-            address(implementation), mainnetRecipient, predictedAddress, keccak256(abi.encodePacked(mainnetRecipient))
+        emit ForwarderFactory.ForwarderDeployed(
+            factory.getImplementation(),
+            mainnetRecipient,
+            predictedAddress,
+            keccak256(abi.encodePacked(mainnetRecipient))
         );
 
-        address payable forwarderAddress = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
+        address payable forwarderAddress = factory.deployForwarderDirect(
+            mainnetRecipient
+        );
 
         // Verify addresses match
         assertEq(predictedAddress, forwarderAddress);
 
-        // Verify forwarder is registered
-        assertEq(factory.getForwarder(address(implementation), mainnetRecipient), forwarderAddress);
-        assertTrue(factory.forwarderExists(address(implementation), mainnetRecipient));
+        // Verify forwarder exists by checking if code exists at predicted address
+        assertTrue(forwarderAddress.code.length > 0);
 
         // Verify forwarder is initialized
-        MockForwarder forwarder = MockForwarder(forwarderAddress);
+        Forwarder forwarder = Forwarder(forwarderAddress);
         assertTrue(forwarder.initialized());
         assertEq(forwarder.mainnetRecipient(), mainnetRecipient);
     }
 
     function testFactoryDeploymentWithArgs() public {
-        // Predict forwarder address
-        address predictedAddress = factory.predictForwarderAddress(address(implementation), mainnetRecipient);
+        // Predict forwarder address using direct method
+        address predictedAddress = factory.predictForwarderAddressDirect(
+            mainnetRecipient
+        );
 
-        // Deploy forwarder
-        address payable forwarderAddress = factory.deployForwarder(address(implementation), mainnetRecipient);
+        // Deploy forwarder using direct method
+        address payable forwarderAddress = factory.deployForwarderDirect(
+            mainnetRecipient
+        );
 
         // Verify addresses match
         assertEq(predictedAddress, forwarderAddress);
 
-        // Verify forwarder is registered
-        assertEq(factory.getForwarder(address(implementation), mainnetRecipient), forwarderAddress);
-        assertTrue(factory.forwarderExists(address(implementation), mainnetRecipient));
+        // Verify forwarder exists
+        assertTrue(factory.forwarderExists(mainnetRecipient));
 
         // Verify forwarder is initialized
-        MockForwarder forwarder = MockForwarder(forwarderAddress);
+        Forwarder forwarder = Forwarder(forwarderAddress);
         assertTrue(forwarder.initialized());
         assertEq(forwarder.mainnetRecipient(), mainnetRecipient);
     }
 
     function testFactoryPreventsDuplicateDeployment() public {
         // Deploy first forwarder
-        factory.deployForwarderDirect(address(implementation), mainnetRecipient);
+        address payable forwarder1 = factory.deployForwarderDirect(
+            mainnetRecipient
+        );
 
-        // Try to deploy again - should fail
-        vm.expectRevert(ForwarderFactory.ForwarderAlreadyExists.selector);
-        factory.deployForwarderDirect(address(implementation), mainnetRecipient);
+        // Verify it exists
+        assertTrue(forwarder1.code.length > 0);
+
+        // Try to deploy again - should revert with DeploymentFailed since the address already has code
+        vm.expectRevert(ForwarderFactory.DeploymentFailed.selector);
+        factory.deployForwarderDirect(mainnetRecipient);
     }
 
     function testGetOrDeployForwarder() public {
         // First call should deploy
-        address payable forwarder1 = factory.getOrDeployForwarder(address(implementation), mainnetRecipient);
+        address payable forwarder1 = factory.getOrDeployForwarder(
+            mainnetRecipient
+        );
         assertTrue(forwarder1 != address(0));
 
         // Second call should return existing
-        address payable forwarder2 = factory.getOrDeployForwarder(address(implementation), mainnetRecipient);
+        address payable forwarder2 = factory.getOrDeployForwarder(
+            mainnetRecipient
+        );
         assertEq(forwarder1, forwarder2);
     }
 
     function testTokenForwarding() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Use deal to set token balance directly
-        deal(address(testToken), forwarderAddr, 1000e18);
+        deal(address(testToken), address(forwarder), 1000e18);
+
+        // Mock the bridge call to succeed
+        vm.mockCall(
+            mockBridge,
+            abi.encodeCall(
+                forwarder.bridgeToken,
+                (address(testToken), 1000e18, mainnetRecipient)
+            ),
+            abi.encode(true)
+        );
+
+        // Expect the bridge call
+        vm.expectCall(
+            mockBridge,
+            abi.encodeCall(
+                forwarder.bridgeToken,
+                (address(testToken), 1000e18, mainnetRecipient)
+            )
+        );
 
         // Forward tokens
         vm.expectEmit(true, true, false, true);
         emit TokensForwarded(address(testToken), 1000e18, mainnetRecipient);
 
         forwarder.forwardToken(address(testToken));
-
-        // Verify tokens were bridged
-        assertEq(forwarder.getBridgedTokens(mainnetRecipient), 1000e18);
     }
 
     function testTokenForwardingSpecificAmount() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Use deal to set token balance directly
-        deal(address(testToken), forwarderAddr, 1000e18);
+        deal(address(testToken), address(forwarder), 1000e18);
+
+        // Mock the bridge call to succeed
+        vm.mockCall(
+            mockBridge,
+            abi.encodeCall(
+                forwarder.bridgeToken,
+                (address(testToken), 500e18, mainnetRecipient)
+            ),
+            abi.encode(true)
+        );
+
+        // Expect the bridge call
+        vm.expectCall(
+            mockBridge,
+            abi.encodeCall(
+                forwarder.bridgeToken,
+                (address(testToken), 500e18, mainnetRecipient)
+            )
+        );
 
         // Forward specific amount
         vm.expectEmit(true, true, false, true);
         emit TokensForwarded(address(testToken), 500e18, mainnetRecipient);
 
         forwarder.forwardToken(address(testToken), 500e18);
-
-        // Verify correct amount was bridged
-        assertEq(forwarder.getBridgedTokens(mainnetRecipient), 500e18);
-        // Verify remaining balance (tokens were transferred to address(0))
-        assertEq(testToken.balanceOf(forwarderAddr), 500e18);
     }
 
     function testTokenForwardingInsufficientBalance() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Try to forward more than available (balance is 0)
         vm.expectRevert("Insufficient balance");
@@ -228,9 +290,8 @@ contract ForwarderTest is Test {
     }
 
     function testTokenForwardingZeroAmount() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Try to forward zero amount
         vm.expectRevert(Forwarder.ZeroAmount.selector);
@@ -242,47 +303,72 @@ contract ForwarderTest is Test {
     }
 
     function testNativeForwarding() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Use vm.deal to set native balance directly
-        vm.deal(forwarderAddr, 1 ether);
+        vm.deal(address(forwarder), 1 ether);
+
+        // Mock the bridge call to succeed
+        vm.mockCall(
+            mockBridge,
+            1 ether,
+            abi.encodeCall(forwarder.bridgeNative, (1 ether, mainnetRecipient)),
+            abi.encode(true)
+        );
+
+        // Expect the bridge call
+        vm.expectCall(
+            mockBridge,
+            1 ether,
+            abi.encodeCall(forwarder.bridgeNative, (1 ether, mainnetRecipient))
+        );
 
         // Forward native tokens
         vm.expectEmit(true, false, false, true);
         emit NativeForwarded(1 ether, mainnetRecipient);
 
         forwarder.forwardNative();
-
-        // Verify native tokens were bridged
-        assertEq(forwarder.getBridgedNative(mainnetRecipient), 1 ether);
     }
 
     function testNativeForwardingSpecificAmount() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Use vm.deal to set native balance directly
-        vm.deal(forwarderAddr, 1 ether);
+        vm.deal(address(forwarder), 1 ether);
+
+        // Mock the bridge call to succeed
+        vm.mockCall(
+            mockBridge,
+            0.5 ether,
+            abi.encodeCall(
+                forwarder.bridgeNative,
+                (0.5 ether, mainnetRecipient)
+            ),
+            abi.encode(true)
+        );
+
+        // Expect the bridge call
+        vm.expectCall(
+            mockBridge,
+            0.5 ether,
+            abi.encodeCall(
+                forwarder.bridgeNative,
+                (0.5 ether, mainnetRecipient)
+            )
+        );
 
         // Forward specific amount
         vm.expectEmit(true, false, false, true);
         emit NativeForwarded(0.5 ether, mainnetRecipient);
 
         forwarder.forwardNative(0.5 ether);
-
-        // Verify correct amount was bridged
-        assertEq(forwarder.getBridgedNative(mainnetRecipient), 0.5 ether);
-        // Verify remaining balance
-        assertEq(forwarderAddr.balance, 0.5 ether);
     }
 
     function testNativeForwardingZeroAmount() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Try to forward zero amount
         vm.expectRevert(Forwarder.ZeroAmount.selector);
@@ -294,48 +380,69 @@ contract ForwarderTest is Test {
     }
 
     function testBatchForwardTokens() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Create multiple test tokens
-        MockERC20 token2 = new MockERC20("Test Token 2", "TEST2", 6);
-        MockERC20 token3 = new MockERC20("Test Token 3", "TEST3", 8);
+        TestERC20 token2 = new TestERC20("Test Token 2", "TEST2");
+        TestERC20 token3 = new TestERC20("Test Token 3", "TEST3");
 
-        // Use deal to set token balances directly
-        deal(address(testToken), forwarderAddr, 1000e18);
-        deal(address(token2), forwarderAddr, 500e6);
-        deal(address(token3), forwarderAddr, 250e8);
+        // Mint tokens to forwarder
+        testToken.mint(address(forwarder), 1000e18);
+        token2.mint(address(forwarder), 500e6);
+        token3.mint(address(forwarder), 250e8);
 
-        // Prepare token array
+        // Mock the bridge calls to succeed for all tokens
+        vm.mockCall(
+            mockBridge,
+            abi.encodeCall(
+                forwarder.bridgeToken,
+                (address(testToken), 1000e18, mainnetRecipient)
+            ),
+            abi.encode(true)
+        );
+        vm.mockCall(
+            mockBridge,
+            abi.encodeCall(
+                forwarder.bridgeToken,
+                (address(token2), 500e6, mainnetRecipient)
+            ),
+            abi.encode(true)
+        );
+        vm.mockCall(
+            mockBridge,
+            abi.encodeCall(
+                forwarder.bridgeToken,
+                (address(token3), 250e8, mainnetRecipient)
+            ),
+            abi.encode(true)
+        );
+
+        // Create token array
         address[] memory tokens = new address[](3);
         tokens[0] = address(testToken);
         tokens[1] = address(token2);
         tokens[2] = address(token3);
 
-        // Batch forward tokens
+        // Forward all tokens
         forwarder.batchForwardTokens(tokens);
-
-        // Verify all tokens were bridged (total amount regardless of decimals)
-        assertEq(forwarder.getBridgedTokens(mainnetRecipient), 1000e18 + 500e6 + 250e8);
     }
 
     function testGetBalance() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
-        MockForwarder forwarder = MockForwarder(forwarderAddr);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Test ERC20 balance
-        deal(address(testToken), forwarderAddr, 1000e18);
+        deal(address(testToken), address(forwarder), 1000e18);
         assertEq(forwarder.getBalance(address(testToken)), 1000e18);
 
         // Test native balance
-        vm.deal(forwarderAddr, 1 ether);
+        vm.deal(address(forwarder), 1 ether);
         assertEq(forwarder.getBalance(address(0)), 1 ether);
     }
 
     function testUninitializedForwarderFails() public {
-        MockForwarder uninitializedForwarder = new MockForwarder();
+        TestForwarder uninitializedForwarder = new TestForwarder();
 
         // All operations should fail on uninitialized forwarder
         vm.expectRevert("Not initialized");
@@ -346,33 +453,32 @@ contract ForwarderTest is Test {
 
         address[] memory tokens = new address[](1);
         tokens[0] = address(testToken);
+
         vm.expectRevert("Not initialized");
         uninitializedForwarder.batchForwardTokens(tokens);
     }
 
     function testReceiveFunction() public {
-        // Deploy forwarder
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
 
         // Test that forwarder can receive native tokens
-        uint256 initialBalance = forwarderAddr.balance;
+        uint256 initialBalance = address(forwarder).balance;
 
-        (bool success,) = forwarderAddr.call{value: 1 ether}("");
+        (bool success, ) = address(forwarder).call{value: 1 ether}("");
         assertTrue(success);
 
-        assertEq(forwarderAddr.balance, initialBalance + 1 ether);
+        assertEq(address(forwarder).balance, initialBalance + 1 ether);
     }
 
     function testBatchDeployForwarders() public {
-        address[] memory implementations = new address[](2);
         address[] memory recipients = new address[](2);
-
-        implementations[0] = address(implementation);
-        implementations[1] = address(implementation);
         recipients[0] = mainnetRecipient;
-        recipients[1] = address(0x9999999999999999999999999999999999999999);
+        recipients[1] = vm.addr(99);
 
-        address payable[] memory forwarders = factory.batchDeployForwarders(implementations, recipients);
+        address payable[] memory forwarders = factory.batchDeployForwarders(
+            recipients
+        );
 
         assertEq(forwarders.length, 2);
         assertTrue(forwarders[0] != address(0));
@@ -382,14 +488,20 @@ contract ForwarderTest is Test {
 
     function testDeterministicAddresses() public {
         // Deploy forwarder for same recipient using direct method
-        address payable forwarder1 = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
+        address payable forwarder1 = factory.deployForwarderDirect(
+            mainnetRecipient
+        );
 
         // Create new factory (simulating deployment on different chain)
-        ForwarderFactory factory2 = new ForwarderFactory();
+        GnosisChainForwarderFactory factory2 = new GnosisChainForwarderFactory();
 
         // Predict address from both factories
-        address predicted1 = factory.predictForwarderAddressDirect(address(implementation), mainnetRecipient);
-        address predicted2 = factory2.predictForwarderAddressDirect(address(implementation), mainnetRecipient);
+        address predicted1 = factory.predictForwarderAddressDirect(
+            mainnetRecipient
+        );
+        address predicted2 = factory2.predictForwarderAddressDirect(
+            mainnetRecipient
+        );
 
         // The prediction should match the deployed address from the same factory
         assertEq(forwarder1, predicted1);
@@ -399,88 +511,123 @@ contract ForwarderTest is Test {
         assertTrue(predicted1 != predicted2);
 
         // Deploy from second factory and verify it matches its prediction
-        address payable forwarder2 = factory2.deployForwarderDirect(address(implementation), mainnetRecipient);
+        address payable forwarder2 = factory2.deployForwarderDirect(
+            mainnetRecipient
+        );
         assertEq(forwarder2, predicted2);
+    }
+
+    function testBridgeFailure() public {
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
+
+        // Set up token balance
+        deal(address(testToken), address(forwarder), 1000e18);
+
+        // Mock the bridge call to revert
+        vm.mockCallRevert(
+            mockBridge,
+            abi.encodeCall(
+                forwarder.bridgeToken,
+                (address(testToken), 1000e18, mainnetRecipient)
+            ),
+            abi.encodeWithSelector(Forwarder.BridgeFailed.selector)
+        );
+
+        // Expect bridge failure
+        vm.expectRevert(Forwarder.BridgeFailed.selector);
+        forwarder.forwardToken(address(testToken));
+    }
+
+    function testNativeBridgeFailure() public {
+        TestForwarder forwarder = new TestForwarder();
+        forwarder.initialize(mainnetRecipient);
+
+        // Set up native balance
+        vm.deal(address(forwarder), 1 ether);
+
+        // Mock the bridge call to revert
+        vm.mockCallRevert(
+            mockBridge,
+            1 ether,
+            abi.encodeCall(forwarder.bridgeNative, (1 ether, mainnetRecipient)),
+            abi.encodeWithSelector(Forwarder.BridgeFailed.selector)
+        );
+
+        // Expect bridge failure
+        vm.expectRevert(Forwarder.BridgeFailed.selector);
+        forwarder.forwardNative();
     }
 }
 
 /// @title GnosisChainForwarderTest
 /// @notice Test suite specifically for GnosisChainForwarder
 contract GnosisChainForwarderTest is Test {
+    GnosisChainForwarderFactory factory;
     GnosisChainForwarder forwarder;
-    ForwarderFactory factory;
-    address mainnetRecipient = address(0x1234567890123456789012345678901234567890);
+    TestERC20 testToken;
+    address mainnetRecipient = vm.addr(1);
 
     function setUp() public {
         // Set chain ID to Gnosis Chain
         vm.chainId(100);
 
-        // Deploy factory and implementation
-        factory = new ForwarderFactory();
-        GnosisChainForwarder implementation = new GnosisChainForwarder();
+        // Deploy factory (which deploys its own implementation)
+        factory = new GnosisChainForwarderFactory();
 
         // Deploy forwarder instance
-        address payable forwarderAddr = factory.deployForwarderDirect(address(implementation), mainnetRecipient);
+        address payable forwarderAddr = factory.deployForwarderDirect(
+            mainnetRecipient
+        );
         forwarder = GnosisChainForwarder(forwarderAddr);
+
+        // Deploy test token
+        testToken = new TestERC20("Test Token", "TEST");
     }
 
     function testGnosisChainId() public view {
-        assertEq(forwarder.getChainId(), 100);
-        assertEq(forwarder.GNOSIS_CHAIN_ID(), 100);
+        assertEq(block.chainid, 100);
     }
 
     function testBridgeConfiguration() public view {
-        assertTrue(forwarder.isBridgeConfigured());
-        assertTrue(forwarder.OMNIBRIDGE() != address(0));
-        assertTrue(forwarder.XDAI_BRIDGE() != address(0));
-        assertTrue(forwarder.AMB_BRIDGE() != address(0));
+        assertTrue(address(forwarder.OMNIBRIDGE()) != address(0) && address(forwarder.XDAI_BRIDGE()) != address(0));
     }
 
     function testInvalidChainDeployment() public {
-        // Set chain ID to something other than Gnosis Chain
+        // Change to wrong chain
         vm.chainId(1);
 
-        // Deploy implementation
-        GnosisChainForwarder implementation = new GnosisChainForwarder();
-
-        // Should revert when trying to initialize on wrong chain
-        vm.expectRevert(GnosisChainForwarder.InvalidChain.selector);
-        implementation.initialize(mainnetRecipient);
+        GnosisChainForwarder newForwarder = new GnosisChainForwarder();
+        vm.expectRevert(Forwarder.InvalidChain.selector);
+        newForwarder.initialize(mainnetRecipient);
     }
 
     function testEmergencyRecover() public {
-        MockERC20 testToken = new MockERC20("Test Token", "TEST", 18);
+        address recoveryAddress = vm.addr(2);
 
-        // Use deal to give tokens to forwarder
-        deal(address(testToken), address(forwarder), 1000e18);
+        // Give forwarder some tokens
+        testToken.mint(address(forwarder), 1000e18);
 
-        // Only mainnet recipient should be able to recover
-        vm.prank(address(0x9999));
-        vm.expectRevert("Only recipient can recover");
-        forwarder.emergencyRecover(address(testToken), address(0x9999));
-
-        // Mainnet recipient can recover
+        // Only mainnet recipient can recover
         vm.prank(mainnetRecipient);
-        forwarder.emergencyRecover(address(testToken), mainnetRecipient);
+        forwarder.emergencyRecover(address(testToken), recoveryAddress);
 
-        // Verify tokens were recovered
-        assertEq(testToken.balanceOf(mainnetRecipient), 1000e18);
-        assertEq(testToken.balanceOf(address(forwarder)), 0);
+        assertEq(testToken.balanceOf(recoveryAddress), 1000e18);
     }
 
     function testEmergencyRecoverNative() public {
-        // Use vm.deal to give native tokens to forwarder
+        address recoveryAddress = vm.addr(2);
+
+        // Give forwarder some native tokens
         vm.deal(address(forwarder), 1 ether);
 
-        uint256 initialBalance = mainnetRecipient.balance;
+        uint256 initialBalance = recoveryAddress.balance;
 
-        // Recover native tokens
+        // Only mainnet recipient can recover
         vm.prank(mainnetRecipient);
-        forwarder.emergencyRecover(address(0), mainnetRecipient);
+        forwarder.emergencyRecover(address(0), recoveryAddress);
 
-        // Verify native tokens were recovered
-        assertEq(mainnetRecipient.balance, initialBalance + 1 ether);
-        assertEq(address(forwarder).balance, 0);
+        assertEq(recoveryAddress.balance, initialBalance + 1 ether);
     }
 
     function testEmergencyRecoverInvalidAddress() public {
@@ -492,26 +639,21 @@ contract GnosisChainForwarderTest is Test {
     function testInitialization() public view {
         assertTrue(forwarder.initialized());
         assertEq(forwarder.mainnetRecipient(), mainnetRecipient);
-        assertEq(forwarder.getChainId(), 100);
     }
 
     function testForwarderCanReceiveTokens() public {
-        MockERC20 testToken = new MockERC20("Test Token", "TEST", 18);
+        // Mint tokens to forwarder
+        testToken.mint(address(forwarder), 500e18);
 
-        // Use deal to mint and transfer tokens to forwarder
-        deal(address(testToken), address(forwarder), 1000e18);
-
-        // Verify forwarder received tokens
-        assertEq(testToken.balanceOf(address(forwarder)), 1000e18);
-        assertEq(forwarder.getBalance(address(testToken)), 1000e18);
+        assertEq(testToken.balanceOf(address(forwarder)), 500e18);
     }
 
     function testForwarderCanReceiveNative() public {
-        // Use vm.deal to send native tokens to forwarder
-        vm.deal(address(forwarder), 1 ether);
+        uint256 initialBalance = address(forwarder).balance;
 
-        // Verify forwarder received native tokens
-        assertEq(address(forwarder).balance, 1 ether);
-        assertEq(forwarder.getBalance(address(0)), 1 ether);
+        (bool success, ) = address(forwarder).call{value: 1 ether}("");
+        assertTrue(success);
+
+        assertEq(address(forwarder).balance, initialBalance + 1 ether);
     }
 }

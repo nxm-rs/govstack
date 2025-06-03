@@ -104,7 +104,7 @@ contract GovernanceIntegrationTest is TestHelper {
      * @dev Test that verifies the initial setup of the governance system
      * including token distribution, voting power delegation, and governance parameters.
      */
-    function testInitialSetup() public {
+    function testInitialSetup() public view {
         // Verify token distribution matches expected amounts
         assertEq(token.balanceOf(PROPOSER), 1000e18);
         assertEq(token.balanceOf(VOTER1), 3000e18);
@@ -140,7 +140,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 42);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (42));
 
         string memory description = "Set mock target value to 42";
 
@@ -170,7 +170,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 123);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (123));
 
         string memory description = "Set mock target value to 123";
 
@@ -220,7 +220,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 456);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (456));
 
         string memory description = "This proposal should fail";
 
@@ -256,7 +256,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 789);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (789));
 
         string memory description = "This proposal should fail due to low participation";
 
@@ -314,7 +314,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 999);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (999));
 
         string memory description = "Test with updated voting power";
 
@@ -351,7 +351,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(governor);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setProposalThreshold(uint256)", 1000e18);
+        calldatas[0] = abi.encodeCall(governor.setProposalThreshold, (1000e18));
 
         string memory description = "Set proposal threshold to 1000 tokens";
 
@@ -390,7 +390,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         failTargets[0] = address(mockTarget);
         failValues[0] = 0;
-        failCalldatas[0] = abi.encodeWithSignature("setValue(uint256)", 111);
+        failCalldatas[0] = abi.encodeCall(IMockTarget.setValue, (111));
 
         string memory failDescription = "This should fail due to proposal threshold";
 
@@ -408,7 +408,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets1[0] = address(mockTarget);
         values1[0] = 0;
-        calldatas1[0] = abi.encodeWithSignature("setValue(uint256)", 100);
+        calldatas1[0] = abi.encodeCall(IMockTarget.setValue, (100));
 
         string memory description1 = "First proposal";
 
@@ -422,7 +422,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets2[0] = address(mockTarget);
         values2[0] = 0;
-        calldatas2[0] = abi.encodeWithSignature("setValue(uint256)", 200);
+        calldatas2[0] = abi.encodeCall(IMockTarget.setValue, (200));
 
         string memory description2 = "Second proposal";
 
@@ -482,7 +482,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 777);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (777));
 
         string memory description = "Test governance settings verification";
 
@@ -532,7 +532,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 42);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (42));
 
         string memory description = "Compatibility test proposal";
 
@@ -570,7 +570,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 888);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (888));
 
         string memory description = "Test late quorum extension";
 
@@ -653,7 +653,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         targets[0] = address(mockTarget);
         values[0] = 0;
-        calldatas[0] = abi.encodeWithSignature("setValue(uint256)", 999);
+        calldatas[0] = abi.encodeCall(IMockTarget.setValue, (999));
 
         string memory description = "Test early quorum does not extend";
 

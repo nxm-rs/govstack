@@ -29,12 +29,6 @@ abstract contract AbstractDeployer {
     error AmountMustBeGreaterThanZero();
     error DuplicateRecipient();
     error PayeesSharesLengthMismatch();
-    error PayeeZeroAddress();
-    error PayeeSharesMustBeGreaterThanZero();
-    error DuplicatePayee();
-    error TotalSharesMustEqual10000();
-    error EmptyCalldata();
-    error InvalidCalldataLength();
 
     struct TokenConfig {
         string name;
@@ -108,10 +102,7 @@ abstract contract AbstractDeployer {
             _validateDistributions(distributions);
         }
 
-        // Validate splitter config
-        if (splitterConfig.packedPayeesData.length > 0) {
-            _validateSplitterConfig(splitterConfig);
-        }
+
 
         // Generate unique salt
         bytes32 salt = _generateSalt();
@@ -202,54 +193,7 @@ abstract contract AbstractDeployer {
         }
     }
 
-    /**
-     * @dev Internal function to validate splitter config
-     */
-    function _validateSplitterConfig(SplitterConfig memory splitterConfig) internal pure {
-        require(splitterConfig.packedPayeesData.length > 0, EmptyCalldata());
-        require(splitterConfig.packedPayeesData.length % 22 == 0, InvalidCalldataLength());
 
-        uint256 payeeCount = splitterConfig.packedPayeesData.length / 22;
-        require(payeeCount > 0, PayeeZeroAddress());
-
-        uint256 totalShares = 0;
-        bytes memory data = splitterConfig.packedPayeesData;
-
-        // Validate packed payees data
-        for (uint256 i = 0; i < payeeCount; i++) {
-            uint256 offset = i * 22;
-
-            // Extract shares (first 2 bytes) and address (next 20 bytes)
-            uint16 payeeShares;
-            address payee;
-
-            assembly {
-                let dataPtr := add(data, 0x20) // Skip bytes length prefix
-                let entry := add(dataPtr, offset)
-                payeeShares := shr(240, mload(entry)) // Get first 2 bytes
-                payee := shr(96, mload(add(entry, 2))) // Get next 20 bytes
-            }
-
-            require(payee != address(0), PayeeZeroAddress());
-            require(payeeShares > 0, PayeeSharesMustBeGreaterThanZero());
-            totalShares += payeeShares;
-
-            // Check for duplicate payees
-            for (uint256 j = i + 1; j < payeeCount; j++) {
-                uint256 nextOffset = j * 22;
-                address nextPayee;
-
-                assembly {
-                    let dataPtr := add(data, 0x20) // Skip bytes length prefix
-                    let nextEntry := add(dataPtr, nextOffset)
-                    nextPayee := shr(96, mload(add(nextEntry, 2))) // Get address at offset + 2
-                }
-
-                require(payee != nextPayee, DuplicatePayee());
-            }
-        }
-        require(totalShares == 10000, TotalSharesMustEqual10000());
-    }
 }
 
 /**
@@ -344,12 +288,9 @@ contract TestableDeployer is AbstractDeployer {
         return true;
     }
 
-    function validateSplitterConfig(SplitterConfig memory splitterConfig) external pure returns (bool valid) {
-        if (splitterConfig.packedPayeesData.length == 0) {
-            return true; // Empty config is valid (no splitter will be deployed)
-        }
-
-        _validateSplitterConfig(splitterConfig);
+    function validateSplitterConfig(SplitterConfig memory /* splitterConfig */) external pure returns (bool valid) {
+        // Validation is now handled by TokenSplitter.updatePayees() to avoid redundant gas costs
+        // Empty config is valid (no splitter will be deployed)
         return true;
     }
 

@@ -5,8 +5,8 @@ import "./TestHelper.sol";
 
 contract TokenSplitterTest is TestHelper {
     TokenSplitter public splitter;
-    MockERC20 public token1;
-    MockERC20 public token2;
+    TestERC20 public token1;
+    TestERC20 public token2;
 
     // Test payees data
     bytes public packedPayeesData;
@@ -34,8 +34,8 @@ contract TokenSplitterTest is TestHelper {
         splitter.updatePayees(packedPayeesData);
 
         // Give tokens to the owner for testing
-        token1.transfer(owner, 10000 * 10 ** 18);
-        token2.transfer(owner, 10000 * 10 ** 18);
+        token1.mint(owner, 10000 * 10 ** 18);
+        token2.mint(owner, 10000 * 10 ** 18);
     }
 
     function testInitialSetup() public view {
@@ -230,7 +230,7 @@ contract TokenSplitterTest is TestHelper {
         threeWaySplitter.updatePayees(threeWayData);
 
         uint256 amount = 10000 * 10 ** 18;
-        token1.transfer(threeWayOwner, amount);
+        token1.mint(threeWayOwner, amount);
 
         vm.prank(threeWayOwner);
         token1.approve(address(threeWaySplitter), amount);
