@@ -1,0 +1,61 @@
+# Simple Test Deployment Configuration
+# This file contains minimal parameters for quick testing of the deployment system
+
+[token]
+name = "Test Governance Token"
+symbol = "TGOV"
+initial_supply = 0
+
+[governor]
+name = "Test Governor"
+# Time-based parameters for testing
+voting_delay_time = "5 minutes"        # Very short for testing
+voting_period_time = "2 hours"         # Short voting period for testing
+late_quorum_extension_time = "10 minutes"  # Short extension for testing
+quorum_numerator = 100   # 1% quorum for testing
+
+[treasury]
+# Treasury address for testing (has minting/burning privileges)
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+
+[distributions.test]
+description = "Simple test distribution"
+
+[[distributions.test.recipients]]
+name = "Test Account 1"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+amount = "1000000000000000000000"  # 1000 tokens
+description = "Test recipient 1"
+
+[[distributions.test.recipients]]
+name = "Test Account 2"
+address = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+amount = "2000000000000000000000"  # 2000 tokens
+description = "Test recipient 2"
+
+[splitter.test]
+description = "Simple 50/50 test split"
+
+
+
+[[splitter.test.payees]]
+account = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+shares = 5000  # 50% Test Payee 1
+
+[[splitter.test.payees]]
+account = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+shares = 5000  # 50% Test Payee 2
+
+[networks.localhost]
+description = "Local Anvil/Hardhat network"
+chain_id = 31337
+block_time_milliseconds = 1000
+gas_price_gwei = 1
+gas_limit = 30000000
+
+[deployment]
+scenario = "test"
+splitter_scenario = "test"
+verify = false
+save_artifacts = true
+custom_salt = ""
