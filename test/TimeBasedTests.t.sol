@@ -26,7 +26,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test time unit conversion to seconds
      */
-    function testConvertUnitToSeconds() public {
+    function testConvertUnitToSeconds() public view {
         // Test seconds
         assertEq(deployer._convertUnitToSeconds("second", 30), 30);
         assertEq(deployer._convertUnitToSeconds("seconds", 45), 45);
@@ -74,7 +74,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test string to uint parsing
      */
-    function testParseStringToUint() public {
+    function testParseStringToUint() public view {
         assertEq(deployer._parseStringToUint("0"), 0);
         assertEq(deployer._parseStringToUint("1"), 1);
         assertEq(deployer._parseStringToUint("123"), 123);
@@ -103,7 +103,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test substring extraction
      */
-    function testSubstring() public {
+    function testSubstring() public view {
         string memory text = "hello world";
 
         assertEq(deployer._substring(text, 0, 5), "hello");
@@ -129,7 +129,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test time string parsing to blocks (updated for milliseconds)
      */
-    function testParseTimeToBlocks() public {
+    function testParseTimeToBlocks() public view {
         // Test various time formats with 12-second blocks (Ethereum mainnet)
         uint256 blockTimeMs = ETHEREUM_BLOCK_TIME_MS; // 12000ms
 
@@ -148,7 +148,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test time parsing with different block times (updated for milliseconds)
      */
-    function testParseTimeWithDifferentBlockTimes() public {
+    function testParseTimeWithDifferentBlockTimes() public view {
         string memory oneDay = "1 day";
 
         // Ethereum mainnet (12s blocks)
@@ -340,7 +340,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test edge cases in time conversion
      */
-    function testTimeConversionEdgeCases() public {
+    function testTimeConversionEdgeCases() public view {
         uint256 blockTimeMs = ETHEREUM_BLOCK_TIME_MS;
 
         // Test very small times
@@ -362,7 +362,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test realistic deployment timing scenarios
      */
-    function testRealisticDeploymentTiming() public {
+    function testRealisticDeploymentTiming() public view {
         // Test realistic DAO governance scenarios
         TimeTestCase[] memory realisticCases = new TimeTestCase[](5);
         realisticCases[0] = TimeTestCase("2 days", 172800, "Standard voting delay");
@@ -385,7 +385,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test edge cases with various time formats and edge conditions
      */
-    function testEdgeCases() public {
+    function testEdgeCases() public view {
         uint256 blockTimeMs = LOCALHOST_BLOCK_TIME_MS; // 1000ms
 
         // Test minimum values
@@ -404,7 +404,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test realistic governance scenarios across networks
      */
-    function testRealisticGovernanceScenarios() public {
+    function testRealisticGovernanceScenarios() public view {
         // Test a realistic DAO configuration across different networks
         ConversionTestCase[] memory scenarios = new ConversionTestCase[](3);
         scenarios[0] = ConversionTestCase("2 days", ETHEREUM_BLOCK_TIME_MS, 14400, "Ethereum 2-day voting delay");
@@ -426,7 +426,7 @@ contract TimeBasedTests is TestHelper {
     /**
      * @dev Test consistency across different block times
      */
-    function testConsistencyAcrossBlockTimes() public {
+    function testConsistencyAcrossBlockTimes() public view {
         string memory timeString = "1 day";
         uint256 expectedSeconds = SECONDS_PER_DAY;
 

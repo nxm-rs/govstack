@@ -535,9 +535,9 @@ contract TestHelper is Test {
 
     // Helper to assert time conversion accuracy
     function assertTimeConversionAccuracy(
-        string memory timeString,
-        uint256 blockTimeMs,
-        uint256 expectedBlocks,
+        string memory, // timeString
+        uint256, // blockTimeMs
+        uint256, // expectedBlocks
         string memory description
     ) internal pure {
         // This would be used with the Deploy contract's time conversion functions

@@ -48,12 +48,12 @@ contract TestForwarder is Forwarder {
     }
 
     // Mock functions for the bridge calls
-    function bridgeToken(address token, uint256 amount, address recipient) external pure returns (bool) {
+    function bridgeToken(address, uint256, address) external pure returns (bool) {
         // This is just for abi.encodeCall, never actually called
         return true;
     }
 
-    function bridgeNative(uint256 amount, address recipient) external payable returns (bool) {
+    function bridgeNative(uint256, address) external payable returns (bool) {
         // This is just for abi.encodeCall, never actually called
         return true;
     }

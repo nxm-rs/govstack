@@ -71,14 +71,14 @@ contract GnosisChainForwarderForkTest is Test {
         vm.deal(user, 10 ether);
     }
 
-    function testForkSetup() public {
+    function testForkSetup() public view {
         assertEq(block.chainid, GNOSIS_CHAIN_ID);
         assertTrue(forwarder.initialized());
         assertEq(forwarder.mainnetRecipient(), mainnetRecipient);
         assertEq(block.chainid, GNOSIS_CHAIN_ID);
     }
 
-    function testBridgeContractExists() public {
+    function testBridgeContractExists() public view {
         // Check that the bridge contracts exist on Gnosis Chain
         // Note: These may not have code if we're on a fork at a different block
         // Let's just check if they're configured in our forwarder
@@ -90,7 +90,7 @@ contract GnosisChainForwarderForkTest is Test {
         assertEq(address(forwarder.XDAI_BRIDGE()), XDAI_BRIDGE);
     }
 
-    function testBridgeConfiguration() public {
+    function testBridgeConfiguration() public view {
         assertTrue(address(forwarder.OMNIBRIDGE()) != address(0) && address(forwarder.XDAI_BRIDGE()) != address(0));
         assertEq(address(forwarder.OMNIBRIDGE()), OMNIBRIDGE);
         assertEq(address(forwarder.XDAI_BRIDGE()), XDAI_BRIDGE);
@@ -199,7 +199,7 @@ contract GnosisChainForwarderForkTest is Test {
         assertTrue(forwarder.isValidToken(address(testToken)));
     }
 
-    function testGetOmnibridgeAddress() public {
+    function testGetOmnibridgeAddress() public view {
         assertEq(address(forwarder.OMNIBRIDGE()), address(forwarder.OMNIBRIDGE()));
     }
 
@@ -277,14 +277,14 @@ contract GnosisChainForwarderForkTest is Test {
         assertEq(forwarder.getBalance(address(0)), 3 ether);
     }
 
-    function testChainIdValidation() public {
+    function testChainIdValidation() public view {
         // This test confirms we're actually on Gnosis Chain
         assertEq(block.chainid, 100);
         assertEq(block.chainid, 100);
         assertEq(forwarder.GNOSIS_CHAIN_ID(), 100);
     }
 
-    function testContractConstants() public {
+    function testContractConstants() public view {
         // Verify all the constants are correct
         assertEq(address(forwarder.OMNIBRIDGE()), 0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d);
         assertEq(address(forwarder.XDAI_BRIDGE()), 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6);
@@ -321,7 +321,7 @@ contract GnosisChainForwarderForkTest is Test {
         forwarder.forwardNative();
     }
 
-    function testCOWTokenValidation() public {
+    function testCOWTokenValidation() public view {
         // Test with real COW token on Gnosis Chain
         IBridgedToken cowToken = IBridgedToken(COW_TOKEN_GNOSIS);
 
@@ -375,7 +375,7 @@ contract GnosisChainForwarderForkTest is Test {
         }
     }
 
-    function testCOWTokenProperties() public {
+    function testCOWTokenProperties() public view {
         // Test COW token properties
         IBridgedToken cowToken = IBridgedToken(COW_TOKEN_GNOSIS);
 
