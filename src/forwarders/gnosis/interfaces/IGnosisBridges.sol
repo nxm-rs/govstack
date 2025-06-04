@@ -74,4 +74,7 @@ interface IBridgedToken {
 interface IAMBBridge {
     /// @notice Foreign chain message sender.
     function messageSender() external view returns (address);
+
+    /// @notice Message's originating chain id.
+    function messageSourceChainId() external view returns (uint);
 }

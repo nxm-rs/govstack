@@ -135,12 +135,14 @@ contract GnosisChainForwarder is Forwarder {
     }
 
     /// @notice Allow arbitrary calls to be made by authorized senders.
-    function arbitraryCall(address sender, bytes calldata callDataWithValue) external onlyInitialized {
+    function arbitraryCall(address sender, uint value, bytes calldata callData) external onlyInitialized {
         if (
             msg.sender == mainnetRecipient
-                || (msg.sender == address(AMB_BRIDGE) && AMB_BRIDGE.messageSender() == mainnetRecipient)
+                || (
+                    msg.sender == address(AMB_BRIDGE) && AMB_BRIDGE.messageSender() == mainnetRecipient
+                        && AMB_BRIDGE.messageSourceChainId() == 1
+                )
         ) {
-            (uint256 value, bytes memory callData) = abi.decode(callDataWithValue, (uint256, bytes));
             (bool success, bytes memory returnData) = sender.call{value: value}(callData);
             if (!success) {
                 // bubble up the revert

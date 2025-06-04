@@ -427,4 +427,88 @@ contract GnosisChainForwarderForkTest is Test {
             console.log("COW token is not valid for bridging, skipping forward test");
         }
     }
+
+    function testArbitraryCallDirect() public {
+        // unauthorized sender
+        address notReceiver = makeAddr("notReceiver");
+        vm.prank(notReceiver);
+        vm.expectRevert(GnosisChainForwarder.UnauthorizedSender.selector);
+        forwarder.arbitraryCall(notReceiver, 0, hex"");
+
+        MockTargetContract target = new MockTargetContract();
+        assertEq(target.value(), 0);
+
+        // authorized sender: target.setValue(1)
+        vm.prank(mainnetRecipient);
+        forwarder.arbitraryCall(address(target), 0, abi.encodeCall(MockTargetContract.setValue, (1)));
+        assertEq(target.value(), 1);
+
+        // authorized sender: target.setValuePayable(2)
+        vm.deal(address(forwarder), 1 ether);
+        vm.prank(mainnetRecipient);
+        forwarder.arbitraryCall(address(target), 1, abi.encodeCall(MockTargetContract.setValuePayable, ()));
+
+        // authorized sender: target.revertWith("revert message")
+        vm.expectRevert("revert message");
+        vm.prank(mainnetRecipient);
+        forwarder.arbitraryCall(address(target), 0, abi.encodeCall(MockTargetContract.revertWith, ("revert message")));
+    }
+
+    function testArbitraryCallAmb() public {
+        // unauthorized sender
+        address notReceiver = makeAddr("notReceiver");
+        vm.prank(notReceiver);
+        vm.expectRevert(GnosisChainForwarder.UnauthorizedSender.selector);
+        forwarder.arbitraryCall(notReceiver, 0, hex"");
+
+        MockTargetContract target = new MockTargetContract();
+        assertEq(target.value(), 0);
+
+        address ambBridge = address(forwarder.AMB_BRIDGE());
+        // amb bridge sender
+        vm.prank(ambBridge);
+        vm.expectRevert(GnosisChainForwarder.UnauthorizedSender.selector);
+        forwarder.arbitraryCall(address(target), 0, abi.encodeCall(MockTargetContract.setValue, (1)));
+
+        // set AMB bridge messageSender to mainnetRecipient
+        vm.mockCall(ambBridge, abi.encodeCall(IAMBBridge.messageSender, ()), abi.encode(mainnetRecipient));
+        vm.prank(ambBridge);
+        vm.expectRevert(GnosisChainForwarder.UnauthorizedSender.selector);
+        forwarder.arbitraryCall(address(target), 0, abi.encodeCall(MockTargetContract.setValue, (1)));
+
+        // set AMB source chain to 1
+        vm.mockCall(ambBridge, abi.encodeCall(IAMBBridge.messageSourceChainId, ()), abi.encode(1));
+
+        // authorized sender: target.setValue(1)
+        vm.prank(ambBridge);
+        forwarder.arbitraryCall(address(target), 0, abi.encodeCall(MockTargetContract.setValue, (1)));
+        assertEq(target.value(), 1);
+
+        // authorized sender: target.setValuePayable(2)
+        vm.deal(address(forwarder), 1 ether);
+        vm.prank(ambBridge);
+        forwarder.arbitraryCall(address(target), 2, abi.encodeCall(MockTargetContract.setValuePayable, ()));
+        assertEq(target.value(), 2);
+
+        // authorized sender: target.revertWith("revert message")
+        vm.expectRevert("revert message");
+        vm.prank(ambBridge);
+        forwarder.arbitraryCall(address(target), 0, abi.encodeCall(MockTargetContract.revertWith, ("revert message")));
+    }
+}
+
+contract MockTargetContract {
+    uint256 public value;
+
+    function setValue(uint256 _value) external {
+        value = _value;
+    }
+
+    function setValuePayable() external payable {
+        value = msg.value;
+    }
+
+    function revertWith(string memory message) external pure {
+        revert(message);
+    }
 }
