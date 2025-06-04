@@ -26,8 +26,8 @@ contract TokenSplitterTest is TestHelper {
         payees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000}); // 60%
         payees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000}); // 40%
 
-        packedPayeesData = splitter.createPackedPayeesData(payees);
-        expectedHash = splitter.calculatePayeesHash(payees);
+        packedPayeesData = _createPackedPayeesData(payees);
+        expectedHash = _calculatePayeesHash(payees);
 
         // Set the payees (only owner can do this)
         vm.prank(owner);
@@ -39,19 +39,19 @@ contract TokenSplitterTest is TestHelper {
     }
 
     function testInitialSetup() public view {
-        assertTrue(splitter.hasPayees());
+        assertTrue(_hasPayees(address(splitter)));
         assertEq(splitter.payeesHash(), expectedHash);
 
         // Test getPayeeInfo
-        (bool isPayee1, uint16 shares1) = splitter.getPayeeInfo(PAYEE1, packedPayeesData);
+        (bool isPayee1, uint16 shares1) = _getPayeeInfo(address(splitter), PAYEE1, packedPayeesData);
         assertTrue(isPayee1);
         assertEq(shares1, 6000);
 
-        (bool isPayee2, uint16 shares2) = splitter.getPayeeInfo(PAYEE2, packedPayeesData);
+        (bool isPayee2, uint16 shares2) = _getPayeeInfo(address(splitter), PAYEE2, packedPayeesData);
         assertTrue(isPayee2);
         assertEq(shares2, 4000);
 
-        (bool isPayee3, uint16 shares3) = splitter.getPayeeInfo(PAYEE3, packedPayeesData);
+        (bool isPayee3, uint16 shares3) = _getPayeeInfo(address(splitter), PAYEE3, packedPayeesData);
         assertFalse(isPayee3);
         assertEq(shares3, 0);
     }
@@ -73,7 +73,7 @@ contract TokenSplitterTest is TestHelper {
         invalidPayees[0] = TokenSplitter.PayeeData({payee: address(0), shares: 5000});
         invalidPayees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 5000});
 
-        bytes memory invalidPackedData = splitter.createPackedPayeesData(invalidPayees);
+        bytes memory invalidPackedData = _createPackedPayeesData(invalidPayees);
         vm.expectRevert(TokenSplitter.InvalidShares.selector);
         vm.prank(owner);
         splitter.updatePayees(invalidPackedData);
@@ -83,7 +83,7 @@ contract TokenSplitterTest is TestHelper {
         zeroSharesPayees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 0});
         zeroSharesPayees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 10000});
 
-        bytes memory zeroSharesData = splitter.createPackedPayeesData(zeroSharesPayees);
+        bytes memory zeroSharesData = _createPackedPayeesData(zeroSharesPayees);
         vm.expectRevert(TokenSplitter.InvalidShares.selector);
         vm.prank(owner);
         splitter.updatePayees(zeroSharesData);
@@ -93,7 +93,7 @@ contract TokenSplitterTest is TestHelper {
         wrongTotalPayees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 3000});
         wrongTotalPayees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000}); // 7000 total
 
-        bytes memory wrongTotalData = splitter.createPackedPayeesData(wrongTotalPayees);
+        bytes memory wrongTotalData = _createPackedPayeesData(wrongTotalPayees);
         vm.expectRevert(TokenSplitter.InvalidTotalShares.selector);
         vm.prank(owner);
         splitter.updatePayees(wrongTotalData);
@@ -155,7 +155,7 @@ contract TokenSplitterTest is TestHelper {
         wrongPayees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 5000});
         wrongPayees[1] = TokenSplitter.PayeeData({payee: PAYEE3, shares: 5000});
 
-        bytes memory wrongData = splitter.createPackedPayeesData(wrongPayees);
+        bytes memory wrongData = _createPackedPayeesData(wrongPayees);
         vm.expectRevert(TokenSplitter.InvalidPayeesHash.selector);
         splitter.splitToken(address(token1), 1000, wrongData);
     }
@@ -179,14 +179,14 @@ contract TokenSplitterTest is TestHelper {
 
     function testCalculateSplit() public view {
         uint256 amount = 1000 * 10 ** 18;
-        uint256[] memory expectedAmounts = splitter.calculateSplit(amount, packedPayeesData);
+        uint256[] memory expectedAmounts = _calculateSplit(address(splitter), amount, packedPayeesData);
 
         assertEq(expectedAmounts.length, 2);
         assertEq(expectedAmounts[0], 600 * 10 ** 18); // 60%
         assertEq(expectedAmounts[1], 400 * 10 ** 18); // 40%
 
         // Test with amount that has rounding
-        uint256[] memory roundingAmounts = splitter.calculateSplit(1001, packedPayeesData);
+        uint256[] memory roundingAmounts = _calculateSplit(address(splitter), 1001, packedPayeesData);
         assertEq(roundingAmounts[0], 600);
         assertEq(roundingAmounts[1], 401); // Last payee gets remainder
         assertEq(roundingAmounts[0] + roundingAmounts[1], 1001);
@@ -224,7 +224,7 @@ contract TokenSplitterTest is TestHelper {
 
         address threeWayOwner = address(0x456);
         TokenSplitter threeWaySplitter = new TokenSplitter(threeWayOwner);
-        bytes memory threeWayData = threeWaySplitter.createPackedPayeesData(payees);
+        bytes memory threeWayData = _createPackedPayeesData(payees);
 
         vm.prank(threeWayOwner);
         threeWaySplitter.updatePayees(threeWayData);
@@ -248,8 +248,8 @@ contract TokenSplitterTest is TestHelper {
         newPayees[0] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 3000}); // 30%
         newPayees[1] = TokenSplitter.PayeeData({payee: PAYEE3, shares: 7000}); // 70%
 
-        bytes memory newPackedData = splitter.createPackedPayeesData(newPayees);
-        bytes32 newHash = splitter.calculatePayeesHash(newPayees);
+        bytes memory newPackedData = _createPackedPayeesData(newPayees);
+        bytes32 newHash = _calculatePayeesHash(newPayees);
 
         // Update payees (only owner can do this)
         expectEmitPayeeAdded(PAYEE2, 3000);
@@ -262,14 +262,14 @@ contract TokenSplitterTest is TestHelper {
         // Verify new configuration
         assertEq(splitter.payeesHash(), newHash);
 
-        (bool isOldPayee,) = splitter.getPayeeInfo(PAYEE1, newPackedData);
+        (bool isOldPayee,) = _getPayeeInfo(address(splitter), PAYEE1, newPackedData);
         assertFalse(isOldPayee);
 
-        (bool isNewPayee1, uint16 shares1) = splitter.getPayeeInfo(PAYEE2, newPackedData);
+        (bool isNewPayee1, uint16 shares1) = _getPayeeInfo(address(splitter), PAYEE2, newPackedData);
         assertTrue(isNewPayee1);
         assertEq(shares1, 3000);
 
-        (bool isNewPayee2, uint16 shares2) = splitter.getPayeeInfo(PAYEE3, newPackedData);
+        (bool isNewPayee2, uint16 shares2) = _getPayeeInfo(address(splitter), PAYEE3, newPackedData);
         assertTrue(isNewPayee2);
         assertEq(shares2, 7000);
 
@@ -288,7 +288,7 @@ contract TokenSplitterTest is TestHelper {
         payees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
         payees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000});
 
-        bytes32 calculatedHash = splitter.calculatePayeesHash(payees);
+        bytes32 calculatedHash = _calculatePayeesHash(payees);
         assertEq(calculatedHash, expectedHash);
     }
 
@@ -302,13 +302,13 @@ contract TokenSplitterTest is TestHelper {
         payees2[0] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000}); // Swapped order
         payees2[1] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
 
-        bytes32 hash1 = splitter.calculatePayeesHash(payees1);
-        bytes32 hash2 = splitter.calculatePayeesHash(payees2);
+        bytes32 hash1 = _calculatePayeesHash(payees1);
+        bytes32 hash2 = _calculatePayeesHash(payees2);
 
         assertEq(hash1, hash2, "Hashes should be equal regardless of input order");
 
-        bytes memory packedData1 = splitter.createPackedPayeesData(payees1);
-        bytes memory packedData2 = splitter.createPackedPayeesData(payees2);
+        bytes memory packedData1 = _createPackedPayeesData(payees1);
+        bytes memory packedData2 = _createPackedPayeesData(payees2);
 
         assertEq(
             keccak256(packedData1), keccak256(packedData2), "Packed data should be identical regardless of input order"

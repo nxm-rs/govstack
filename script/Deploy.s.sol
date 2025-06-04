@@ -556,7 +556,7 @@ contract Deploy is Script {
         // Verify splitter if deployed
         if (splitterAddress != address(0)) {
             TokenSplitter splitter = TokenSplitter(splitterAddress);
-            require(splitter.hasPayees(), "Splitter should have payees");
+            require(splitter.payeesHash() != bytes32(0), "Splitter should have payees");
         }
 
         console.log("Contract verification successful");

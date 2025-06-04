@@ -43,21 +43,21 @@ contract DeployerTest is TestHelper {
         assertValidDeployment(tokenAddress, governorAddress, splitterAddress, TOKEN_NAME, GOVERNOR_NAME);
 
         TokenSplitter splitter = TokenSplitter(splitterAddress);
-        assertTrue(splitter.hasPayees()); // Payees are now configured during deployment
+        assertTrue(_hasPayees(splitterAddress)); // Payees are now configured during deployment
 
         // Verify that the splitter is properly configured
         TokenSplitter.PayeeData[] memory payees = new TokenSplitter.PayeeData[](2);
         payees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
         payees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000});
 
-        bytes memory packedPayeesData = splitter.createPackedPayeesData(payees);
+        bytes memory packedPayeesData = _createPackedPayeesData(payees);
 
         // Test that we can get payee info with the correct calldata
-        (bool isPayee1, uint16 shares1) = splitter.getPayeeInfo(PAYEE1, packedPayeesData);
+        (bool isPayee1, uint16 shares1) = _getPayeeInfo(splitterAddress, PAYEE1, packedPayeesData);
         assertTrue(isPayee1);
         assertEq(shares1, 6000);
 
-        (bool isPayee2, uint16 shares2) = splitter.getPayeeInfo(PAYEE2, packedPayeesData);
+        (bool isPayee2, uint16 shares2) = _getPayeeInfo(splitterAddress, PAYEE2, packedPayeesData);
         assertTrue(isPayee2);
         assertEq(shares2, 4000);
 
