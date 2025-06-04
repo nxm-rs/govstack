@@ -5,7 +5,7 @@ import "../../Forwarder.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IOmnibridge, IxDaiBridge, IBridgedToken, IAMBBridge} from "./interfaces/IGnosisBridges.sol";
 
-/// @title GnosisChainForwarder
+/// @title GnosisForwarder
 /// @notice Concrete implementation of Forwarder for Gnosis Chain using Omnibridge/AMB
 /// @dev Forwards tokens from Gnosis Chain to Ethereum mainnet via the canonical bridge
 contract GnosisForwarder is Forwarder {

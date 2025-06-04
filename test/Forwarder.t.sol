@@ -73,7 +73,7 @@ contract ForwarderTest is Test {
     event NativeForwarded(uint256 amount, address indexed recipient);
 
     function setUp() public {
-        // Set chain ID to Gnosis Chain since factory deploys GnosisChainForwarder
+        // Set chain ID to Gnosis Chain since factory deploys GnosisForwarder
         vm.chainId(100);
 
         // Create test addresses

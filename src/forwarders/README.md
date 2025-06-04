@@ -7,9 +7,9 @@ A deterministic token forwarding system for bridging tokens from Gnosis Chain (a
 This system provides:
 
 - **Abstract Forwarder Contract**: Defines the forwarding interface and core logic.
-- **GnosisChainForwarder**: Concrete implementation for Gnosis Chain, supporting ERC20 and native token bridging.
+- **GnosisForwarder**: Concrete implementation for Gnosis Chain, supporting ERC20 and native token bridging.
 - **ForwarderFactory**: Deterministic deployment of forwarders using CREATE2 and minimal proxies.
-- **GnosisChainForwarderFactory**: Factory for GnosisChainForwarder contracts, ensuring correct deployment on Gnosis Chain.
+- **GnosisForwarderFactory**: Factory for GnosisForwarder contracts, ensuring correct deployment on Gnosis Chain.
 
 ## Gnosis Chain Implementation
 
@@ -19,7 +19,7 @@ This system provides:
 - **xDAI Bridge** (native): `0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6`
 - **AMB Bridge** (messaging): `0x75Df5AF045d91108662D8080fD1FEFAd6aA0bb59`
 
-These addresses are hardcoded in the `GnosisChainForwarder` contract.
+These addresses are hardcoded in the `GnosisForwarder` contract.
 
 ## Key Features
 
@@ -36,7 +36,7 @@ These addresses are hardcoded in the `GnosisChainForwarder` contract.
 Deploy the factory on Gnosis Chain:
 
 ```solidity
-GnosisChainForwarderFactory factory = new GnosisChainForwarderFactory();
+GnosisForwarderFactory factory = new GnosisForwarderFactory();
 ```
 
 ### Deploying a Forwarder
