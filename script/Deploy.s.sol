@@ -1133,6 +1133,9 @@ contract Deploy is Script {
             "Deployment cancelled by user"
         );
 
+        // Record logs to capture deployment events
+        vm.recordLogs();
+
         // Start broadcasting
         vm.startBroadcast();
 
@@ -1141,9 +1144,9 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
 
-        // Extract deployment addresses from events
+        // Extract deployment addresses from broadcast file
         (address tokenAddress, address governorAddress, address splitterAddress, uint256 totalDistributed, bytes32 salt)
-        = _getDeploymentDetailsFromEvents();
+        = _getDeploymentDetailsFromBroadcast();
 
         emit ContractsPredicted(tokenAddress, governorAddress, splitterAddress);
 
@@ -1238,9 +1241,9 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
 
-        // Extract deployment addresses from events
+        // Extract deployment addresses from broadcast file
         (address tokenAddress, address governorAddress, address splitterAddress, uint256 totalDistributed, bytes32 salt)
-        = _getDeploymentDetailsFromEvents();
+        = _getDeploymentDetailsFromBroadcast();
 
         emit ContractsPredicted(tokenAddress, governorAddress, splitterAddress);
 
@@ -1281,10 +1284,11 @@ contract Deploy is Script {
     }
 
     /**
-     * @dev Extract deployment details from events
+     * @dev Extract deployment details from broadcast JSON file
      */
-    function _getDeploymentDetailsFromEvents()
+    function _getDeploymentDetailsFromBroadcast()
         internal
+        view
         returns (
             address tokenAddress,
             address governorAddress,
@@ -1293,20 +1297,57 @@ contract Deploy is Script {
             bytes32 salt
         )
     {
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == keccak256("DeploymentCompleted(address,address,address,address,uint256,bytes32)"))
-            {
-                tokenAddress = address(uint160(uint256(logs[i].topics[1])));
-                governorAddress = address(uint160(uint256(logs[i].topics[2])));
-                splitterAddress = address(uint160(uint256(logs[i].topics[3])));
-                (, uint256 distributed, bytes32 deploymentSalt) = abi.decode(logs[i].data, (address, uint256, bytes32));
-                totalDistributed = distributed;
-                salt = deploymentSalt;
+        // Read the latest broadcast file
+        string memory broadcastPath = string.concat(
+            "broadcast/Deploy.s.sol/",
+            vm.toString(block.chainid),
+            "/runInteractiveWithScenario-latest.json"
+        );
+        
+        string memory json = vm.readFile(broadcastPath);
+        
+        // Get the Deployer contract address from the first transaction
+        address deployerAddress = vm.parseJsonAddress(json, ".transactions[0].contractAddress");
+        
+        // Find the DeploymentCompleted event in the logs
+        // Event signature: DeploymentCompleted(address,address,address,address,uint256,bytes32)
+        bytes32 deploymentCompletedTopic = 0x492087711a91a3084770255e71f4d91cb2c694c66db15a894544614762706b20;
+        
+        // Iterate through logs in the first receipt to find the deployment event
+        uint256 logIndex = 0;
+        while (true) {
+            try vm.parseJsonAddress(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].address")) returns (address logAddress) {
+                // Check if this log is from the deployer contract
+                if (logAddress == deployerAddress) {
+                    // Check if this is the DeploymentCompleted event
+                    try vm.parseJsonBytes32(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[0]")) returns (bytes32 topic0) {
+                        if (topic0 == deploymentCompletedTopic) {
+                            // Extract addresses from indexed topics
+                            tokenAddress = address(uint160(uint256(vm.parseJsonBytes32(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[1]")))));
+                            governorAddress = address(uint160(uint256(vm.parseJsonBytes32(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[2]")))));
+                            splitterAddress = address(uint160(uint256(vm.parseJsonBytes32(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[3]")))));
+                            
+                            // Extract data (finalOwner, totalDistributed, salt)
+                            bytes memory logData = vm.parseJsonBytes(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].data"));
+                            
+                            // Decode the non-indexed parameters from data
+                            // Data contains: finalOwner (32 bytes), totalDistributed (32 bytes), salt (32 bytes)
+                            (,totalDistributed, salt) = abi.decode(logData, (address, uint256, bytes32));
+                            
+                            return (tokenAddress, governorAddress, splitterAddress, totalDistributed, salt);
+                        }
+                    } catch {
+                        // Skip this log and continue
+                    }
+                }
+                logIndex++;
+            } catch {
+                // No more logs, break the loop
                 break;
             }
         }
+        
+        revert("DeploymentCompleted event not found in broadcast logs");
     }
 
     /**
