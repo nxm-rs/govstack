@@ -4,13 +4,14 @@ pragma solidity ^0.8;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 import "../script/Deploy.s.sol";
+import "./TestHelper.sol";
 
 /**
  * @title InteractiveDeploymentTest
  * @dev Tests for the interactive deployment functionality in Deploy.s.sol
  * Note: These tests focus on the parsing and discovery logic, not the actual interactive prompts
  */
-contract InteractiveDeploymentTest is Test {
+contract InteractiveDeploymentTest is TestHelper {
     Deploy deployer;
 
     // Test config file content
@@ -38,7 +39,7 @@ contract InteractiveDeploymentTest is Test {
         "scenario = \"default\"\n" "splitter_scenario = \"default\"\n" "verify = true\n" "save_artifacts = true\n";
 
     function setUp() public {
-        deployer = new Deploy();
+        deployer = createDeployer();
     }
 
     function testConfigFileDiscovery() public view {
@@ -241,22 +242,6 @@ contract InteractiveDeploymentTest is Test {
             deployer._bytesMatch(content, content.length - 1, pattern1),
             "Should not match when pattern extends beyond content"
         );
-    }
-
-    function testParseStringToUint() public {
-        // Test the _parseStringToUint helper function
-        assertEq(deployer._parseStringToUint("1"), 1, "Should parse '1' to 1");
-        assertEq(deployer._parseStringToUint("123"), 123, "Should parse '123' to 123");
-        assertEq(deployer._parseStringToUint("0"), 0, "Should parse '0' to 0");
-
-        // Test invalid inputs (should revert)
-        assertEq(deployer._parseStringToUint(""), 0, "Should return 0 for empty string");
-
-        vm.expectRevert("Invalid number character");
-        deployer._parseStringToUint("abc");
-
-        vm.expectRevert("Invalid number character");
-        deployer._parseStringToUint("12abc");
     }
 
     function testDuplicateScenarioHandling() public view {

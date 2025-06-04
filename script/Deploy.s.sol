@@ -331,7 +331,7 @@ contract Deploy is Script {
 
         // Extract number part
         string memory numberStr = _substring(timeStr, 0, spaceIndex);
-        uint256 number = _parseStringToUint(numberStr);
+        uint256 number = vm.parseUint(numberStr);
         require(number > 0 || keccak256(bytes(numberStr)) == keccak256(bytes("0")), "Invalid number character");
 
         // Extract unit part
@@ -394,28 +394,6 @@ contract Deploy is Script {
             result[i - start] = strBytes[i];
         }
         return string(result);
-    }
-
-    /**
-     * @dev Parse string to uint256
-     */
-    function _parseStringToUint(string memory str) public pure returns (uint256) {
-        bytes memory strBytes = bytes(str);
-        uint256 result = 0;
-
-        if (strBytes.length == 0) {
-            return 0;
-        }
-
-        for (uint256 i = 0; i < strBytes.length; i++) {
-            uint8 digit = uint8(strBytes[i]);
-            if (digit < 48 || digit > 57) {
-                revert("Invalid number character");
-            }
-            result = result * 10 + (digit - 48);
-        }
-
-        return result;
     }
 
     /**
@@ -593,7 +571,7 @@ contract Deploy is Script {
             string memory choice = vm.prompt(fileList);
 
             // Parse choice
-            uint256 choiceNum = _parseStringToUint(choice);
+            uint256 choiceNum = vm.parseUint(choice);
             if (choiceNum > 0 && choiceNum <= tomlCount) {
                 configPath = tomlFiles[choiceNum - 1];
             } else {
@@ -663,7 +641,7 @@ contract Deploy is Script {
             if (bytes(choice).length == 0) {
                 distributionScenario = "";
             } else {
-                uint256 choiceNum = _parseStringToUint(choice);
+                uint256 choiceNum = vm.parseUint(choice);
                 if (choiceNum > 0 && choiceNum <= scenarios.length) {
                     distributionScenario = scenarios[choiceNum - 1];
                 } else {
@@ -717,7 +695,7 @@ contract Deploy is Script {
             if (bytes(choice).length == 0) {
                 splitterScenario = "";
             } else {
-                uint256 choiceNum = _parseStringToUint(choice);
+                uint256 choiceNum = vm.parseUint(choice);
                 if (choiceNum > 0 && choiceNum <= scenarios.length) {
                     splitterScenario = scenarios[choiceNum - 1];
                 } else if (choiceNum == scenarios.length + 1) {
