@@ -45,10 +45,10 @@ contract Token is ERC20Votes, Ownable {
     }
 
     /**
-     * @dev Burn tokens from the caller's balance. Only the owner can call this function.
+     * @dev Burn tokens from the caller's balance.
      * @param amount The amount of tokens to burn
      */
-    function burn(uint256 amount) external onlyOwner {
+    function burn(uint256 amount) external {
         _burn(msg.sender, amount);
     }
 
