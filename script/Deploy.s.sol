@@ -474,21 +474,30 @@ contract Deploy is Script {
         OwnerConfig memory ownerConfig,
         RecipientInfo[] memory recipients,
         SplitterInfo memory splitterInfo
-    ) internal view {
-        console.log("=== Deployment Configuration ===");
-        console.log("Token Name:", tokenConfig.name);
-        console.log("Token Symbol:", tokenConfig.symbol);
-        console.log("Governor Name:", governorConfig.name);
-        console.log("Voting Delay:", governorConfig.votingDelay);
-        console.log("Voting Period:", governorConfig.votingPeriod);
-        console.log("Quorum Numerator:", governorConfig.quorumNumerator);
-        console.log("Late Quorum Extension:", governorConfig.lateQuorumExtension);
-        console.log("Final Owner:", ownerConfig.ownerAddress);
-        console.log("Recipients Count:", recipients.length);
-        console.log("Splitter Payees Count:", splitterInfo.payees.length);
-        console.log("Splitter Payees:", splitterInfo.payees.length);
-        console.log("Chain ID:", block.chainid);
-        console.log("================================");
+    ) internal {
+        string memory configDisplay = string.concat(
+            "=== Deployment Configuration ===\n",
+            "Token Name: ", tokenConfig.name, "\n",
+            "Token Symbol: ", tokenConfig.symbol, "\n",
+            "Governor Name: ", governorConfig.name, "\n",
+            "Voting Delay: ", vm.toString(governorConfig.votingDelay), "\n",
+            "Voting Period: ", vm.toString(governorConfig.votingPeriod), "\n",
+            "Quorum Numerator: ", vm.toString(governorConfig.quorumNumerator), "\n",
+            "Late Quorum Extension: ", vm.toString(governorConfig.lateQuorumExtension), "\n",
+            "Final Owner: ", vm.toString(ownerConfig.ownerAddress), "\n",
+            "Recipients Count: ", vm.toString(recipients.length), "\n",
+            "Splitter Payees Count: ", vm.toString(splitterInfo.payees.length), "\n",
+            "Chain ID: ", vm.toString(block.chainid), "\n",
+            "================================\n\n",
+            "Continue with deployment? (y/N)"
+        );
+        
+        string memory confirmation = vm.prompt(configDisplay);
+        require(
+            keccak256(abi.encodePacked(confirmation)) == keccak256(abi.encodePacked("y")) ||
+            keccak256(abi.encodePacked(confirmation)) == keccak256(abi.encodePacked("Y")),
+            "Deployment cancelled by user"
+        );
     }
 
     /**
@@ -504,25 +513,14 @@ contract Deploy is Script {
         internal
         returns (string memory configPath, string memory distributionScenario, string memory splitterScenario)
     {
-        console.log("=== Interactive Deployment Configuration ===");
-        console.log();
-
         // Dynamically discover and list config files
         configPath = _promptForConfigFile();
-
-        // Load the selected config to discover available scenarios
-        console.log("Loading configuration to discover available scenarios...");
-        console.log();
 
         // Prompt for distribution scenario based on config content
         distributionScenario = _promptForDistributionScenario(configPath);
 
         // Prompt for splitter scenario based on config content
         splitterScenario = _promptForSplitterScenario(configPath);
-
-        console.log("Configuration selection completed.");
-        console.log("============================================");
-        console.log();
 
         return (configPath, distributionScenario, splitterScenario);
     }
@@ -532,14 +530,9 @@ contract Deploy is Script {
      * @return configPath The selected configuration file path
      */
     function _promptForConfigFile() internal returns (string memory configPath) {
-        console.log("Discovering configuration files in config/ directory...");
-        console.log();
-
         // Check if config files exist first
         if (!vm.exists("config/deployment.toml")) {
-            console.log("WARNING: config/deployment.toml not found!");
-            console.log("Make sure you're running this script from the project root directory.");
-            configPath = vm.prompt("Enter config file path manually");
+            configPath = vm.prompt("=== Configuration File Selection ===\n\nWARNING: config/deployment.toml not found!\nMake sure you're running this script from the project root directory.\n\nEnter config file path manually:");
             return configPath;
         }
 
@@ -556,13 +549,12 @@ contract Deploy is Script {
             }
 
             if (tomlCount == 0) {
-                console.log("No .toml files found in config/ directory.");
-                configPath = vm.prompt("Enter config file path manually");
+                configPath = vm.prompt("=== Configuration File Selection ===\n\nNo .toml files found in config/ directory.\n\nEnter config file path manually:");
                 return configPath;
             }
 
             // Build file list as a single string since console.log doesn't work in interactive mode
-            string memory fileList = "Available configuration files:\n";
+            string memory fileList = "=== Configuration File Selection ===\n\nAvailable configuration files:\n";
             for (uint256 i = 0; i < tomlCount; i++) {
                 fileList = string.concat(fileList, vm.toString(i + 1), ". ", tomlFiles[i], "\n");
             }
@@ -578,17 +570,14 @@ contract Deploy is Script {
                 configPath = choice; // Allow custom path
             }
 
-            // Validate the file exists
+            // Validate the file exists - no need for additional prompts, just proceed
             try vm.readFile(configPath) {
-                console.log("Selected config:", configPath);
-                console.log();
+                // File exists, continue silently
             } catch {
-                console.log("Warning: Could not read file. Proceeding anyway...");
+                // File might not exist, but proceed anyway
             }
         } catch {
-            console.log("Could not list config files automatically.");
-            console.log("Common config files: config/deployment.toml, config/test.toml");
-            configPath = vm.prompt("Enter config file path");
+            configPath = vm.prompt("=== Configuration File Selection ===\n\nCould not list config files automatically.\nCommon config files: config/deployment.toml, config/test.toml\n\nEnter config file path:");
         }
 
         return configPath;
@@ -603,8 +592,6 @@ contract Deploy is Script {
         internal
         returns (string memory distributionScenario)
     {
-        console.log("Discovering available distribution scenarios...");
-
         try vm.readFile(configPath) returns (string memory configContent) {
             // Parse distribution scenarios from config
             string[] memory scenarios = _parseDistributionScenariosInternal(configContent);
@@ -617,7 +604,7 @@ contract Deploy is Script {
             }
 
             // Build scenarios list as a single string since console.log doesn't work in interactive mode
-            string memory scenariosList = string.concat("Available distribution scenarios in ", configPath, ":\n");
+            string memory scenariosList = string.concat("=== Distribution Scenario Selection ===\n\nAvailable distribution scenarios in ", configPath, ":\n");
             for (uint256 i = 0; i < scenarios.length; i++) {
                 scenariosList = string.concat(scenariosList, vm.toString(i + 1), ". ", scenarios[i]);
 
@@ -650,7 +637,7 @@ contract Deploy is Script {
             }
         } catch {
             distributionScenario = vm.prompt(
-                "Could not read config file for scenario discovery.\nEnter distribution scenario name (or press Enter for default)"
+                "=== Distribution Scenario Selection ===\n\nCould not read config file for scenario discovery.\nEnter distribution scenario name (or press Enter for default):"
             );
         }
 
@@ -663,14 +650,12 @@ contract Deploy is Script {
      * @return splitterScenario The selected splitter scenario
      */
     function _promptForSplitterScenario(string memory configPath) internal returns (string memory splitterScenario) {
-        console.log("Discovering available splitter scenarios...");
-
         try vm.readFile(configPath) returns (string memory configContent) {
             // Parse splitter scenarios from config
             string[] memory scenarios = _parseSplitterScenariosInternal(configContent);
 
             // Build scenarios list as a single string since console.log doesn't work in interactive mode
-            string memory scenariosList = string.concat("Available splitter scenarios in ", configPath, ":\n");
+            string memory scenariosList = string.concat("=== Splitter Scenario Selection ===\n\nAvailable splitter scenarios in ", configPath, ":\n");
             for (uint256 i = 0; i < scenarios.length; i++) {
                 scenariosList = string.concat(scenariosList, vm.toString(i + 1), ". ", scenarios[i]);
 
@@ -706,7 +691,7 @@ contract Deploy is Script {
             }
         } catch {
             splitterScenario = vm.prompt(
-                "Could not read config file for scenario discovery.\nEnter splitter scenario name (none to skip, or Enter for default)"
+                "=== Splitter Scenario Selection ===\n\nCould not read config file for scenario discovery.\nEnter splitter scenario name (none to skip, or Enter for default):"
             );
         }
 
@@ -945,23 +930,26 @@ contract Deploy is Script {
      * @return privateKey The private key to use for deployment
      */
     function _promptForPrivateKey() internal returns (uint256 privateKey) {
-        console.log("=== Private Key Configuration ===");
-        console.log();
-
-        // Prompt for private key (securely)
-        console.log("Enter the private key for deployment:");
-        console.log("WARNING: Use only a dedicated deployment wallet with minimal funds!");
-        console.log("NEVER use your main wallet's private key for deployments!");
-        console.log();
-        string memory privateKeyStr = vm.promptSecret("Private Key (0x...)");
+        string memory privateKeyStr = vm.promptSecret(string.concat(
+            "=== Private Key Configuration ===\n\n",
+            "Enter the private key for deployment:\n",
+            "WARNING: Use only a dedicated deployment wallet with minimal funds!\n",
+            "NEVER use your main wallet's private key for deployments!\n\n",
+            "Private Key (0x...):"
+        ));
 
         // Convert hex string to uint256
         privateKey = vm.parseUint(privateKeyStr);
 
-        console.log();
-        console.log("Private key configured securely.");
-        console.log("==================================");
-        console.log();
+        // Derive wallet address from private key to show user
+        address walletAddress = vm.addr(privateKey);
+        
+        vm.prompt(string.concat(
+            "Private key configured securely.\n",
+            "Wallet Address: ", vm.toString(walletAddress), "\n",
+            "==================================\n\n",
+            "Press Enter to continue..."
+        ));
 
         return privateKey;
     }
@@ -1024,6 +1012,21 @@ contract Deploy is Script {
             splitterConfig.packedPayeesData = packedData;
         }
 
+        // Get the deployer address from the current broadcaster
+        address deployerAddress = msg.sender;
+        
+        string memory deploymentConfirm = string.concat(
+            "=== Ready to Deploy ===\n",
+            "Deploying from wallet: ", vm.toString(deployerAddress), "\n\n",
+            "Continue with deployment? (y/N)"
+        );
+        string memory confirmation = vm.prompt(deploymentConfirm);
+        require(
+            keccak256(abi.encodePacked(confirmation)) == keccak256(abi.encodePacked("y")) ||
+            keccak256(abi.encodePacked(confirmation)) == keccak256(abi.encodePacked("Y")),
+            "Deployment cancelled by user"
+        );
+
         // Start broadcasting
         vm.startBroadcast();
 
@@ -1046,15 +1049,24 @@ contract Deploy is Script {
 
         emit DeploymentCompleted(tokenAddress, governorAddress, splitterAddress, totalDistributed, salt);
 
-        console.log("=== Deployment Successful ===");
-        console.log("Token Address:", tokenAddress);
-        console.log("Governor Address:", governorAddress);
+        string memory finalSummary = string.concat(
+            "=== Deployment Successful ===\n",
+            "Token Address: ", vm.toString(tokenAddress), "\n",
+            "Governor Address: ", vm.toString(governorAddress), "\n"
+        );
+        
         if (splitterAddress != address(0)) {
-            console.log("Splitter Address:", splitterAddress);
+            finalSummary = string.concat(finalSummary, "Splitter Address: ", vm.toString(splitterAddress), "\n");
         }
-        console.log("Total Distributed:", totalDistributed);
-        console.log("Deployment Salt:", vm.toString(salt));
-        console.log("=============================");
+        
+        finalSummary = string.concat(
+            finalSummary,
+            "Total Distributed: ", vm.toString(totalDistributed), "\n",
+            "Deployment Salt: ", vm.toString(salt), "\n",
+            "=============================\n\nDeployment completed successfully!"
+        );
+        
+        vm.prompt(finalSummary);
     }
 
     /**
@@ -1091,9 +1103,22 @@ contract Deploy is Script {
             splitterConfig.packedPayeesData = packedData;
         }
 
-        console.log("Starting deployment with provided configuration...");
-        console.log("Verification:", shouldVerify ? "Enabled" : "Disabled");
-        console.log();
+        // Derive wallet address from private key to show in deployment summary
+        address walletAddress = vm.addr(privateKey);
+        
+        string memory deploymentStart = string.concat(
+            "=== Ready to Deploy ===\n",
+            "Deploying from wallet: ", vm.toString(walletAddress), "\n",
+            "Verification: ", shouldVerify ? "Enabled" : "Disabled", "\n\n",
+            "Continue with deployment? (y/N)"
+        );
+        
+        string memory confirmation = vm.prompt(deploymentStart);
+        require(
+            keccak256(abi.encodePacked(confirmation)) == keccak256(abi.encodePacked("y")) ||
+            keccak256(abi.encodePacked(confirmation)) == keccak256(abi.encodePacked("Y")),
+            "Deployment cancelled by user"
+        );
 
         // Start broadcasting with the provided private key
         vm.startBroadcast(privateKey);
@@ -1111,11 +1136,11 @@ contract Deploy is Script {
 
         // Verify deployment if requested
         if (shouldVerify) {
-            console.log("Verifying contracts on Etherscan...");
-            console.log("Make sure ETHERSCAN_API_KEY environment variable is set!");
-            _verifyDeployment(tokenAddress, governorAddress, splitterAddress);
-        } else {
-            console.log("Skipping contract verification (verify=false in config)");
+            string memory verifyConfirm = vm.prompt("Verifying contracts on Etherscan...\nMake sure ETHERSCAN_API_KEY environment variable is set!\n\nContinue with verification? (y/N)");
+            if (keccak256(abi.encodePacked(verifyConfirm)) == keccak256(abi.encodePacked("y")) ||
+                keccak256(abi.encodePacked(verifyConfirm)) == keccak256(abi.encodePacked("Y"))) {
+                _verifyDeployment(tokenAddress, governorAddress, splitterAddress);
+            }
         }
 
         // Save deployment artifacts
@@ -1123,18 +1148,29 @@ contract Deploy is Script {
 
         emit DeploymentCompleted(tokenAddress, governorAddress, splitterAddress, totalDistributed, salt);
 
-        console.log("=== Interactive Deployment Successful ===");
-        console.log("Token Address:", tokenAddress);
-        console.log("Governor Address:", governorAddress);
+        string memory finalSummary = string.concat(
+            "=== Interactive Deployment Successful ===\n",
+            "Token Address: ", vm.toString(tokenAddress), "\n",
+            "Governor Address: ", vm.toString(governorAddress), "\n"
+        );
+        
         if (splitterAddress != address(0)) {
-            console.log("Splitter Address:", splitterAddress);
+            finalSummary = string.concat(finalSummary, "Splitter Address: ", vm.toString(splitterAddress), "\n");
         }
-        console.log("Total Distributed:", totalDistributed);
-        console.log("Deployment Salt:", vm.toString(salt));
+        
+        finalSummary = string.concat(
+            finalSummary,
+            "Total Distributed: ", vm.toString(totalDistributed), "\n",
+            "Deployment Salt: ", vm.toString(salt), "\n"
+        );
+        
         if (shouldVerify) {
-            console.log("Contracts verified on Etherscan");
+            finalSummary = string.concat(finalSummary, "Contracts verified on Etherscan\n");
         }
-        console.log("==========================================");
+        
+        finalSummary = string.concat(finalSummary, "==========================================\n\nDeployment completed successfully!");
+        
+        vm.prompt(finalSummary);
     }
 
     /**
@@ -1187,7 +1223,7 @@ contract Deploy is Script {
             require(splitter.payeesHash() != bytes32(0), "Splitter should have payees");
         }
 
-        console.log("Contract verification successful");
+        // Contract verification successful - no need for additional prompt
     }
 
     /**
@@ -1230,7 +1266,7 @@ contract Deploy is Script {
         string memory filename = string.concat("deployments/deployment-", chainId, "-", timestamp, ".json");
         vm.writeFile(filename, artifacts);
 
-        console.log("Deployment artifacts saved to:", filename);
+        // Deployment artifacts saved - no need for additional prompt
     }
 
     /**
