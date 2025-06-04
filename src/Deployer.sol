@@ -33,7 +33,6 @@ abstract contract AbstractDeployer {
     struct TokenConfig {
         string name;
         string symbol;
-        uint256 initialSupply;
     }
 
     struct GovernorConfig {
@@ -109,9 +108,7 @@ abstract contract AbstractDeployer {
         DeploymentAddresses memory addresses;
 
         // Deploy Token contract
-        addresses.token = address(
-            new Token{salt: salt}(tokenConfig.name, tokenConfig.symbol, tokenConfig.initialSupply, address(this))
-        );
+        addresses.token = address(new Token{salt: salt}(tokenConfig.name, tokenConfig.symbol, 0, address(this)));
         emit TokenDeployed(addresses.token, tokenConfig.name, tokenConfig.symbol);
 
         // Deploy Governor contract
@@ -237,10 +234,7 @@ contract TestableDeployer is AbstractDeployer {
     ) external pure returns (DeploymentAddresses memory addresses) {
         // Predict Token address
         bytes32 tokenBytecodeHash = keccak256(
-            abi.encodePacked(
-                type(Token).creationCode,
-                abi.encode(tokenConfig.name, tokenConfig.symbol, tokenConfig.initialSupply, deployer)
-            )
+            abi.encodePacked(type(Token).creationCode, abi.encode(tokenConfig.name, tokenConfig.symbol, 0, deployer))
         );
         addresses.token =
             address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, tokenBytecodeHash)))));

@@ -51,7 +51,7 @@ contract GasTest is Script {
 
         // Create token configuration
         AbstractDeployer.TokenConfig memory tokenConfig =
-            AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL, initialSupply: 0});
+            AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL});
 
         // Create governor configuration
         AbstractDeployer.GovernorConfig memory governorConfig = AbstractDeployer.GovernorConfig({
@@ -112,7 +112,7 @@ contract GasTest is Script {
 
         // Create token configuration
         AbstractDeployer.TokenConfig memory tokenConfig =
-            AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL, initialSupply: 0});
+            AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL});
 
         // Create governor configuration
         AbstractDeployer.GovernorConfig memory governorConfig = AbstractDeployer.GovernorConfig({
@@ -273,7 +273,7 @@ contract GasTest is Script {
 
         // Create token configuration
         AbstractDeployer.TokenConfig memory tokenConfig =
-            AbstractDeployer.TokenConfig({name: "Large Scale Gas Test", symbol: "LSGT", initialSupply: 0});
+            AbstractDeployer.TokenConfig({name: "Large Scale Gas Test", symbol: "LSGT"});
 
         // Create governor configuration
         AbstractDeployer.GovernorConfig memory governorConfig = AbstractDeployer.GovernorConfig({

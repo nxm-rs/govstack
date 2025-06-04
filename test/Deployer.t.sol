@@ -70,12 +70,12 @@ contract DeployerTest is TestHelper {
         AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
 
         AbstractDeployer.TokenConfig memory invalidTokenConfig =
-            AbstractDeployer.TokenConfig({name: "", symbol: TOKEN_SYMBOL, initialSupply: 0});
+            AbstractDeployer.TokenConfig({name: "", symbol: TOKEN_SYMBOL});
 
         vm.expectRevert(AbstractDeployer.TokenNameEmpty.selector);
         new TestableDeployer(invalidTokenConfig, createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER);
 
-        invalidTokenConfig = AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: "", initialSupply: 0});
+        invalidTokenConfig = AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: ""});
 
         vm.expectRevert(AbstractDeployer.TokenSymbolEmpty.selector);
         new TestableDeployer(invalidTokenConfig, createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER);

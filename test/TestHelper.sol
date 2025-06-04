@@ -111,7 +111,7 @@ contract TestHelper is Test {
     }
 
     function createBasicTokenConfig() internal pure returns (AbstractDeployer.TokenConfig memory) {
-        return AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL, initialSupply: 0});
+        return AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL});
     }
 
     function createBasicGovernorConfig() internal pure returns (AbstractDeployer.GovernorConfig memory) {
