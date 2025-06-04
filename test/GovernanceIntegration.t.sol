@@ -473,7 +473,7 @@ contract GovernanceIntegrationTest is TestHelper {
         assertEq(governor.votingDelay(), VOTING_DELAY);
 
         // Verify current proposal threshold
-        assertEq(governor.proposalThreshold(), 0);
+        assertEq(governor.proposalThreshold(), 1);
 
         // Create a simple proposal to verify governance flow works
         address[] memory targets = new address[](1);
