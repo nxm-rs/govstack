@@ -234,48 +234,64 @@ contract Deploy is Script {
         string memory scenarioGovernorPath = string.concat(".distributions.", deploymentConfig.scenario, ".governor");
 
         // Check if scenario has token overrides
-        try vm.parseTomlString(toml, string.concat(scenarioTokenPath, ".name")) returns (string memory scenarioTokenName) {
+        try vm.parseTomlString(toml, string.concat(scenarioTokenPath, ".name")) returns (
+            string memory scenarioTokenName
+        ) {
             if (bytes(scenarioTokenName).length > 0) {
                 tokenConfig.name = scenarioTokenName;
             }
         } catch {}
 
-        try vm.parseTomlString(toml, string.concat(scenarioTokenPath, ".symbol")) returns (string memory scenarioTokenSymbol) {
+        try vm.parseTomlString(toml, string.concat(scenarioTokenPath, ".symbol")) returns (
+            string memory scenarioTokenSymbol
+        ) {
             if (bytes(scenarioTokenSymbol).length > 0) {
                 tokenConfig.symbol = scenarioTokenSymbol;
             }
         } catch {}
 
         // Check if scenario has governor overrides
-        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".name")) returns (string memory scenarioGovernorName) {
+        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".name")) returns (
+            string memory scenarioGovernorName
+        ) {
             if (bytes(scenarioGovernorName).length > 0) {
                 timeBasedConfig.name = scenarioGovernorName;
             }
         } catch {}
 
-        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".voting_delay_time")) returns (string memory scenarioVotingDelayTime) {
+        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".voting_delay_time")) returns (
+            string memory scenarioVotingDelayTime
+        ) {
             if (bytes(scenarioVotingDelayTime).length > 0) {
                 timeBasedConfig.votingDelayTime = scenarioVotingDelayTime;
             }
         } catch {}
 
-        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".voting_period_time")) returns (string memory scenarioVotingPeriodTime) {
+        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".voting_period_time")) returns (
+            string memory scenarioVotingPeriodTime
+        ) {
             if (bytes(scenarioVotingPeriodTime).length > 0) {
                 timeBasedConfig.votingPeriodTime = scenarioVotingPeriodTime;
             }
         } catch {}
 
-        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".late_quorum_extension_time")) returns (string memory scenarioLateQuorumExtensionTime) {
+        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".late_quorum_extension_time")) returns (
+            string memory scenarioLateQuorumExtensionTime
+        ) {
             if (bytes(scenarioLateQuorumExtensionTime).length > 0) {
                 timeBasedConfig.lateQuorumExtensionTime = scenarioLateQuorumExtensionTime;
             }
         } catch {}
 
-        try vm.parseTomlUint(toml, string.concat(scenarioGovernorPath, ".quorum_numerator")) returns (uint256 scenarioQuorumNumerator) {
+        try vm.parseTomlUint(toml, string.concat(scenarioGovernorPath, ".quorum_numerator")) returns (
+            uint256 scenarioQuorumNumerator
+        ) {
             timeBasedConfig.quorumNumerator = scenarioQuorumNumerator;
         } catch {}
 
-        try vm.parseTomlUint(toml, string.concat(scenarioGovernorPath, ".proposal_threshold")) returns (uint256 scenarioProposalThreshold) {
+        try vm.parseTomlUint(toml, string.concat(scenarioGovernorPath, ".proposal_threshold")) returns (
+            uint256 scenarioProposalThreshold
+        ) {
             timeBasedConfig.proposalThreshold = scenarioProposalThreshold;
         } catch {}
 
