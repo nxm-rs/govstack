@@ -9,6 +9,8 @@ import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorPreventLateQuorum.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
+/// @title TokenGovernor
+/// @author Nexum Contributors
 contract TokenGovernor is
     Governor,
     GovernorSettings,
@@ -32,16 +34,12 @@ contract TokenGovernor is
         GovernorPreventLateQuorum(lateQuorumExtension)
     {}
 
-    /**
-     * @dev Override to resolve conflict between Governor and GovernorSettings
-     */
+    /// @dev Override to resolve conflict between Governor and GovernorSettings
     function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
         return GovernorSettings.proposalThreshold();
     }
 
-    /**
-     * @dev Override to resolve conflict between Governor and GovernorPreventLateQuorum
-     */
+    /// @dev Override to resolve conflict between Governor and GovernorPreventLateQuorum
     function _tallyUpdated(uint256 proposalId) internal override(Governor, GovernorPreventLateQuorum) {
         GovernorPreventLateQuorum._tallyUpdated(proposalId);
     }

@@ -5,9 +5,10 @@ import {LibClone} from "solady/utils/LibClone.sol";
 import "./interfaces/IForwarder.sol";
 
 /// @title ForwarderFactory
+/// @author Nexum Contributors
 /// @notice Abstract factory contract for deterministic deployment of Forwarder contracts using Solady's LibClone
-/// @dev Uses CREATE2 to ensure the same mainnet recipient always gets the same forwarder address
-///      Concrete implementations should deploy their specific forwarder type
+/// @dev Uses CREATE2 to ensure the same mainnet recipient always gets the same forwarder address.
+/// Concrete implementations should deploy their specific forwarder type.
 abstract contract ForwarderFactory {
     using LibClone for address;
 
@@ -35,15 +36,15 @@ abstract contract ForwarderFactory {
     function deployForwarder(address mainnetRecipient) public returns (address payable forwarder) {
         require(mainnetRecipient != address(0), "Invalid recipient");
 
-        // Generate deterministic salt based on mainnet recipient
+        /// Generate deterministic salt based on mainnet recipient
         bytes32 salt = keccak256(abi.encodePacked(mainnetRecipient));
 
-        // Deploy using LibClone's cloneDeterministic (minimal proxy)
+        /// Deploy using LibClone's cloneDeterministic (minimal proxy)
         forwarder = payable(LibClone.cloneDeterministic(implementation, salt));
 
         require(forwarder != address(0), DeploymentFailed());
 
-        // Initialize the deployed forwarder
+        /// Initialize the deployed forwarder
         IForwarder(forwarder).initialize(mainnetRecipient);
 
         emit ForwarderDeployed(implementation, mainnetRecipient, forwarder, salt);
@@ -71,7 +72,7 @@ abstract contract ForwarderFactory {
     function getOrDeployForwarder(address mainnetRecipient) external returns (address payable forwarder) {
         forwarder = payable(predictForwarderAddress(mainnetRecipient));
 
-        // Check if forwarder already exists by checking if it has code
+        /// Check if forwarder already exists by checking if it has code
         if (forwarder.code.length == 0) {
             forwarder = this.deployForwarder(mainnetRecipient);
         }

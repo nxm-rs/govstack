@@ -6,6 +6,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 
 /// @title Forwarder
+/// @author Nexum Contributors
 /// @notice Abstract contract for forwarding tokens from L2 to mainnet through bridges
 /// @dev This contract is designed to be deterministically deployed to the same address
 ///      on any L2 chain when forwarding to the same mainnet address

@@ -5,20 +5,19 @@ import "./Token.sol";
 import "./Governor.sol";
 import "./TokenSplitter.sol";
 
-/**
- * @title AbstractDeployer
- * @dev Abstract base contract for deploying Token, Governor, and TokenSplitter contracts
- * with initial configuration using CREATE2. Uses chain ID and block hash as salt to ensure
- * unique addresses across different chains. This contract enables atomic deployment and
- * initial configuration in a single transaction.
- *
- * The deployer automatically self-destructs after successful deployment, leaving only the
- * deployed contracts.
- */
+/// @title AbstractDeployer
+/// @author Nexum Contributors
+/// @notice Abstract base contract for deploying Token, Governor, and TokenSplitter contracts
+/// with initial configuration using CREATE2. Uses chain ID and block hash as salt to ensure
+/// unique addresses across different chains. This contract enables atomic deployment and
+/// initial configuration in a single transaction.
+///
+/// The deployer automatically self-destructs after successful deployment, leaving only the
+/// deployed contracts.
 abstract contract AbstractDeployer {
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+    /*´:°•.°+.*•´.*:˚.°*.˚•´.*°.°•.°•.*•´.*:˚.°*.˚•´.*°.°•.°+.*•´.*:*/
     /*                       CUSTOM ERRORS                        */
-    /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+    /*.•°:°.´+˚.*°.˚:*.`•*.+°.•°:´*.`•*.•°.•°:°.´:•˚°.*°.˚:*.`•+°.•°*/
 
     error FinalOwnerZeroAddress();
     error TokenNameEmpty();
@@ -73,17 +72,14 @@ abstract contract AbstractDeployer {
     event DeployerSelfDestructed(DeploymentAddresses addresses);
     event SaltGenerated(bytes32 indexed salt, uint256 chainId, bytes32 blockHash, address deployer);
 
-    /**
-     * @dev Deploys Token, Governor, and TokenSplitter contracts with initial configuration.
-     * All operations are atomic within the constructor. Uses CREATE2 with chain ID and block hash
-     * as salt to ensure unique addresses across different chains.
-     *
-     * @param tokenConfig Configuration for the token
-     * @param governorConfig Configuration for the governor
-     * @param splitterConfig Configuration for the splitter
-     * @param distributions Array of initial token distributions
-     * @param finalOwner The final owner of the token contract (receives ownership after distribution)
-     */
+    /// @notice Deploys Token, Governor, and TokenSplitter contracts with initial configuration.
+    /// @dev All operations are atomic within the constructor. Uses CREATE2 with chain ID and block hash
+    /// as salt to ensure unique addresses across different chains.
+    /// @param tokenConfig Configuration for the token
+    /// @param governorConfig Configuration for the governor
+    /// @param splitterConfig Configuration for the splitter
+    /// @param distributions Array of initial token distributions
+    /// @param finalOwner The final owner of the token contract (receives ownership after distribution)
     constructor(
         TokenConfig memory tokenConfig,
         GovernorConfig memory governorConfig,
@@ -165,18 +161,16 @@ abstract contract AbstractDeployer {
         selfdestruct(payable(finalOwner));
     }
 
-    /**
-     * @dev Internal function to generate a unique salt for CREATE2 deployment
-     */
+    /// @notice Internal function to generate a unique salt for CREATE2 deployment
+    /// @return salt The generated salt
     function _generateSalt() internal view returns (bytes32 salt) {
         salt = keccak256(
             abi.encodePacked(block.chainid, blockhash(block.number - 1), address(this), block.timestamp, tx.origin)
         );
     }
 
-    /**
-     * @dev Internal function to validate distributions
-     */
+    /// @notice Internal function to validate distributions
+    /// @param distributions The array of token distributions to validate
     function _validateDistributions(TokenDistribution[] memory distributions) internal pure {
         require(distributions.length <= 100, TooManyDistributions());
 
@@ -198,10 +192,9 @@ abstract contract AbstractDeployer {
     }
 }
 
-/**
- * @title Deployer
- * @dev Production implementation with minimal bytecode - utility functions are internal
- */
+/// @title Deployer
+/// @author Nexum Contributors
+/// @notice Production implementation with minimal bytecode - utility functions are internal
 contract Deployer is AbstractDeployer {
     constructor(
         TokenConfig memory tokenConfig,
@@ -212,10 +205,9 @@ contract Deployer is AbstractDeployer {
     ) AbstractDeployer(tokenConfig, governorConfig, splitterConfig, distributions, finalOwner) {}
 }
 
-/**
- * @title TestableDeployer
- * @dev Test implementation with full utility functions exposed as public/external
- */
+/// @title TestableDeployer
+/// @author Nexum Contributors
+/// @notice Test implementation with full utility functions exposed as public/external
 contract TestableDeployer is AbstractDeployer {
     constructor(
         TokenConfig memory tokenConfig,
@@ -225,6 +217,13 @@ contract TestableDeployer is AbstractDeployer {
         address finalOwner
     ) AbstractDeployer(tokenConfig, governorConfig, splitterConfig, distributions, finalOwner) {}
 
+    /// @notice Predict deployment addresses for Token, Governor, and Splitter
+    /// @param deployer The deployer address
+    /// @param tokenConfig Token configuration
+    /// @param governorConfig Governor configuration
+    /// @param splitterConfig Splitter configuration
+    /// @param salt The salt used for CREATE2
+    /// @return addresses The predicted deployment addresses
     function predictDeploymentAddresses(
         address deployer,
         TokenConfig memory tokenConfig,
@@ -265,12 +264,18 @@ contract TestableDeployer is AbstractDeployer {
         }
     }
 
+    /// @notice Generate a predictable salt for deployment
+    /// @param deployerAddress The deployer address
+    /// @return salt The generated salt
     function generatePredictableSalt(address deployerAddress) external view returns (bytes32 salt) {
         salt = keccak256(
             abi.encodePacked(block.chainid, blockhash(block.number - 1), deployerAddress, block.timestamp, tx.origin)
         );
     }
 
+    /// @notice Validate token distributions
+    /// @param distributions The array of token distributions to validate
+    /// @return valid True if valid, otherwise reverts
     function validateDistributions(TokenDistribution[] memory distributions) external pure returns (bool valid) {
         require(distributions.length <= 100, TooManyDistributions());
 
@@ -293,12 +298,9 @@ contract TestableDeployer is AbstractDeployer {
         return true;
     }
 
-    function validateSplitterConfig(SplitterConfig memory /* splitterConfig */ ) external pure returns (bool valid) {
-        // Validation is now handled by TokenSplitter.updatePayees() to avoid redundant gas costs
-        // Empty config is valid (no splitter will be deployed)
-        return true;
-    }
-
+    /// @notice Calculate the total distribution amount
+    /// @param distributions The array of token distributions
+    /// @return total The total distributed amount
     function calculateTotalDistribution(TokenDistribution[] memory distributions)
         external
         pure
