@@ -70,7 +70,7 @@ abstract contract AbstractDeployer {
 
     /// @notice Deploys Token, Governor, and TokenSplitter contracts with initial configuration.
     /// @dev All operations are atomic within the constructor. Uses CREATE2 with chain ID and block hash
-    /// as salt to ensure unique addresses across different chains.
+    /// as salt to ensure unique addresses across different chains. The Governor becomes the owner of the token.
     /// @param tokenConfig Configuration for the token
     /// @param governorConfig Configuration for the governor
     /// @param splitterConfig Configuration for the splitter
@@ -143,11 +143,11 @@ abstract contract AbstractDeployer {
             }
         }
 
-        // Transfer token ownership to the final owner
-        token.transferOwnership(finalOwner);
+        // Transfer token ownership to the governor
+        token.transferOwnership(addresses.governor);
 
         emit DeploymentCompleted(
-            addresses.token, addresses.governor, addresses.splitter, finalOwner, totalDistributed, salt
+            addresses.token, addresses.governor, addresses.splitter, addresses.governor, totalDistributed, salt
         );
 
         // Emit self-destruct event
@@ -243,7 +243,8 @@ contract TestableDeployer is AbstractDeployer {
                     addresses.token,
                     governorConfig.votingDelay,
                     governorConfig.votingPeriod,
-                    governorConfig.quorumNumerator
+                    governorConfig.quorumNumerator,
+                    governorConfig.lateQuorumExtension
                 )
             )
         );

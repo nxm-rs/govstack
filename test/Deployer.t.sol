@@ -170,11 +170,56 @@ contract DeployerTest is TestHelper {
         );
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        (address tokenAddress,,, uint256 totalDistributed,) = extractDeploymentAddresses(logs);
+        (address tokenAddress, address governorAddress,, uint256 totalDistributed,) = extractDeploymentAddresses(logs);
 
         Token token = Token(tokenAddress);
         assertEq(totalDistributed, 0);
         assertEq(token.totalSupply(), 0);
-        assertEq(token.owner(), OWNER);
+        assertEq(token.owner(), governorAddress);
+    }
+
+    function testGovernorOwnsTokenAndCanMintBurn() public {
+        AbstractDeployer.SplitterConfig memory emptySplitterConfig;
+        AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
+
+        vm.recordLogs();
+
+        new TestableDeployer(
+            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER
+        );
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        (address tokenAddress, address governorAddress,,,) = extractDeploymentAddresses(logs);
+
+        Token token = Token(tokenAddress);
+
+        // Verify Governor owns the token
+        assertEq(token.owner(), governorAddress, "Token should be owned by Governor");
+
+        // Test that Governor can mint tokens
+        uint256 mintAmount = 1000 * 10 ** 18;
+        vm.prank(governorAddress);
+        token.mint(USER1, mintAmount);
+        assertEq(token.balanceOf(USER1), mintAmount + 1000 * 10 ** 18); // USER1 already had 1000 from distribution
+
+        // Test that Governor can burn tokens
+        uint256 burnAmount = 500 * 10 ** 18;
+        vm.prank(governorAddress);
+        token.burn(USER1, burnAmount);
+        assertEq(token.balanceOf(USER1), mintAmount + 1000 * 10 ** 18 - burnAmount);
+
+        // Test that non-Governor cannot mint/burn
+        vm.expectRevert();
+        vm.prank(USER1);
+        token.mint(USER2, 100);
+
+        vm.expectRevert();
+        vm.prank(USER1);
+        token.burn(USER1, 100);
+
+        // Test that Governor can transfer ownership
+        vm.prank(governorAddress);
+        token.transferOwnership(USER1);
+        assertEq(token.owner(), USER1);
     }
 }

@@ -376,7 +376,7 @@ contract GovernanceIntegrationTest is TestHelper {
         address smallHolder = address(0x99);
 
         // Give small holder only 50 tokens (below threshold of 1000)
-        vm.prank(OWNER);
+        vm.prank(address(governor));
         token.mint(smallHolder, 50e18);
 
         vm.prank(smallHolder);

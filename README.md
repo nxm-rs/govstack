@@ -79,13 +79,13 @@ forge test
 **Direct Forge Script**
 ```bash
 # Set environment variables
-export ETH_RPC_URL="your_rpc_url"
+export RPC_URL="your_rpc_url"
 export ETHERSCAN_API_KEY="your_api_key"
 
 # Deploy with interactive scenario selection
 forge script script/Deploy.s.sol:Deploy \
   --sig "runInteractiveWithScenario()" \
-  --rpc-url $ETH_RPC_URL \
+  --rpc-url $RPC_URL \
   --broadcast \
   --verify
 ```

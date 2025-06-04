@@ -4,9 +4,6 @@ pragma solidity ^0.8;
 import "forge-std/Script.sol";
 import "forge-std/Vm.sol";
 import "../src/Deployer.sol";
-import "../src/Token.sol";
-import "../src/Governor.sol";
-import "../src/Splitter.sol";
 
 /**
  * @title Deploy
@@ -15,10 +12,6 @@ import "../src/Splitter.sol";
  * and CREATE2 deployment with unique salts per chain.
  */
 contract Deploy is Script {
-    struct OwnerConfig {
-        address ownerAddress;
-    }
-
     struct NetworkConfig {
         string description;
         uint256 chainId;
@@ -30,21 +23,20 @@ contract Deploy is Script {
     struct DeploymentConfig {
         string scenario;
         string splitterScenario;
-        bool verify;
         bool saveArtifacts;
         string customSalt;
     }
 
     struct RecipientInfo {
-        string name;
-        address recipientAddress;
-        uint256 amount;
-        string description;
+        address addr; // "address" in JSON
+        string amount; // "amount" in JSON (as string to handle large numbers)
+        string description; // "description" in JSON
+        string name; // "name" in JSON
     }
 
     struct PayeeInfo {
-        address account;
-        uint256 shares;
+        address account; // "account" in JSON
+        uint256 shares; // "shares" in JSON
     }
 
     struct SplitterInfo {
@@ -132,7 +124,6 @@ contract Deploy is Script {
         (
             AbstractDeployer.TokenConfig memory tokenConfig,
             AbstractDeployer.GovernorConfig memory governorConfig,
-            OwnerConfig memory ownerConfig,
             NetworkConfig memory networkConfig,
             DeploymentConfig memory deploymentConfig,
             RecipientInfo[] memory recipients,
@@ -145,12 +136,10 @@ contract Deploy is Script {
         _validateNetwork(networkConfig);
 
         // Display configuration
-        _displayConfiguration(tokenConfig, governorConfig, ownerConfig, recipients, splitterInfo);
+        _displayConfiguration(tokenConfig, governorConfig, networkConfig, recipients, splitterInfo);
 
         // Deploy contracts with interactive configuration
-        _deployWithInteractiveConfiguration(
-            tokenConfig, governorConfig, ownerConfig, recipients, splitterInfo, privateKey, deploymentConfig.verify
-        );
+        _deployWithInteractiveConfiguration(tokenConfig, governorConfig, recipients, splitterInfo, privateKey);
     }
 
     /**
@@ -176,7 +165,6 @@ contract Deploy is Script {
         (
             AbstractDeployer.TokenConfig memory tokenConfig,
             AbstractDeployer.GovernorConfig memory governorConfig,
-            OwnerConfig memory ownerConfig,
             NetworkConfig memory networkConfig,
             DeploymentConfig memory deploymentConfig,
             RecipientInfo[] memory recipients,
@@ -189,10 +177,10 @@ contract Deploy is Script {
         _validateNetwork(networkConfig);
 
         // Display configuration
-        _displayConfiguration(tokenConfig, governorConfig, ownerConfig, recipients, splitterInfo);
+        _displayConfiguration(tokenConfig, governorConfig, networkConfig, recipients, splitterInfo);
 
         // Deploy contracts
-        _deployWithConfiguration(tokenConfig, governorConfig, ownerConfig, recipients, splitterInfo);
+        _deployWithConfiguration(tokenConfig, governorConfig, recipients, splitterInfo);
     }
 
     /**
@@ -207,7 +195,6 @@ contract Deploy is Script {
         returns (
             AbstractDeployer.TokenConfig memory tokenConfig,
             AbstractDeployer.GovernorConfig memory governorConfig,
-            OwnerConfig memory ownerConfig,
             NetworkConfig memory networkConfig,
             DeploymentConfig memory deploymentConfig,
             RecipientInfo[] memory recipients,
@@ -228,15 +215,12 @@ contract Deploy is Script {
         timeBasedConfig.lateQuorumExtensionTime = vm.parseTomlString(toml, ".governor.late_quorum_extension_time");
         timeBasedConfig.quorumNumerator = vm.parseTomlUint(toml, ".governor.quorum_numerator");
 
-        ownerConfig.ownerAddress = vm.parseTomlAddress(toml, ".treasury.address");
-
         deploymentConfig.scenario = bytes(distributionScenario).length > 0
             ? distributionScenario
             : vm.parseTomlString(toml, ".deployment.scenario");
         deploymentConfig.splitterScenario = bytes(splitterScenario).length > 0
             ? splitterScenario
             : vm.parseTomlString(toml, ".deployment.splitter_scenario");
-        deploymentConfig.verify = vm.parseTomlBool(toml, ".deployment.verify");
         deploymentConfig.saveArtifacts = vm.parseTomlBool(toml, ".deployment.save_artifacts");
         deploymentConfig.customSalt = vm.parseTomlString(toml, ".deployment.custom_salt");
 
@@ -403,27 +387,11 @@ contract Deploy is Script {
         internal
         returns (RecipientInfo[] memory recipients)
     {
-        string memory scenarioPath = string.concat(".distributions.", scenario);
+        string memory scenarioPath = string.concat(".distributions.", scenario, ".recipients");
 
-        // Parse recipients array
-        string[] memory recipientNames =
-            vm.parseTomlStringArray(toml, string.concat(scenarioPath, ".recipients[*].name"));
-        address[] memory recipientAddresses =
-            vm.parseTomlAddressArray(toml, string.concat(scenarioPath, ".recipients[*].address"));
-        uint256[] memory recipientAmounts =
-            vm.parseTomlUintArray(toml, string.concat(scenarioPath, ".recipients[*].amount"));
-        string[] memory recipientDescriptions =
-            vm.parseTomlStringArray(toml, string.concat(scenarioPath, ".recipients[*].description"));
-
-        recipients = new RecipientInfo[](recipientNames.length);
-        for (uint256 i = 0; i < recipientNames.length; i++) {
-            recipients[i] = RecipientInfo({
-                name: recipientNames[i],
-                recipientAddress: recipientAddresses[i],
-                amount: recipientAmounts[i],
-                description: recipientDescriptions[i]
-            });
-        }
+        // Parse the recipients array directly
+        bytes memory recipientsRaw = vm.parseToml(toml, scenarioPath);
+        recipients = abi.decode(recipientsRaw, (RecipientInfo[]));
 
         emit DistributionScenarioSelected(scenario, recipients.length);
     }
@@ -445,15 +413,11 @@ contract Deploy is Script {
         // Load description
         splitterInfo.description = vm.parseTomlString(toml, string.concat(scenarioPath, ".description"));
 
-        // Load payees
-        address[] memory payeeAccounts =
-            vm.parseTomlAddressArray(toml, string.concat(scenarioPath, ".payees[*].account"));
-        uint256[] memory payeeShares = vm.parseTomlUintArray(toml, string.concat(scenarioPath, ".payees[*].shares"));
+        // Load payees using struct parsing for arrays of tables
+        string memory payeesPath = string.concat(scenarioPath, ".payees");
 
-        splitterInfo.payees = new PayeeInfo[](payeeAccounts.length);
-        for (uint256 i = 0; i < payeeAccounts.length; i++) {
-            splitterInfo.payees[i] = PayeeInfo({account: payeeAccounts[i], shares: payeeShares[i]});
-        }
+        bytes memory payeesRaw = vm.parseToml(toml, payeesPath);
+        splitterInfo.payees = abi.decode(payeesRaw, (PayeeInfo[]));
 
         emit SplitterScenarioSelected(scenario, splitterInfo.payees.length, 0);
     }
@@ -471,48 +435,15 @@ contract Deploy is Script {
     function _displayConfiguration(
         AbstractDeployer.TokenConfig memory tokenConfig,
         AbstractDeployer.GovernorConfig memory governorConfig,
-        OwnerConfig memory ownerConfig,
+        NetworkConfig memory networkConfig,
         RecipientInfo[] memory recipients,
         SplitterInfo memory splitterInfo
     ) internal {
-        string memory configDisplay = string.concat(
-            "=== Deployment Configuration ===\n",
-            "Token Name: ",
-            tokenConfig.name,
-            "\n",
-            "Token Symbol: ",
-            tokenConfig.symbol,
-            "\n",
-            "Governor Name: ",
-            governorConfig.name,
-            "\n",
-            "Voting Delay: ",
-            vm.toString(governorConfig.votingDelay),
-            "\n",
-            "Voting Period: ",
-            vm.toString(governorConfig.votingPeriod),
-            "\n",
-            "Quorum Numerator: ",
-            vm.toString(governorConfig.quorumNumerator),
-            "\n",
-            "Late Quorum Extension: ",
-            vm.toString(governorConfig.lateQuorumExtension),
-            "\n",
-            "Final Owner: ",
-            vm.toString(ownerConfig.ownerAddress),
-            "\n",
-            "Recipients Count: ",
-            vm.toString(recipients.length),
-            "\n",
-            "Splitter Payees Count: ",
-            vm.toString(splitterInfo.payees.length),
-            "\n",
-            "Chain ID: ",
-            vm.toString(block.chainid),
-            "\n",
-            "================================\n\n",
-            "Continue with deployment? (y/N)"
-        );
+        string memory configDisplay = _buildBasicConfigDisplay(tokenConfig, governorConfig, networkConfig);
+        configDisplay = string.concat(configDisplay, _buildRecipientsDisplay(recipients));
+        configDisplay = string.concat(configDisplay, _buildSplitterDisplay(splitterInfo));
+        configDisplay =
+            string.concat(configDisplay, "\n================================\n\nContinue with deployment? (y/N)");
 
         string memory confirmation = vm.prompt(configDisplay);
         require(
@@ -520,6 +451,142 @@ contract Deploy is Script {
                 || keccak256(abi.encodePacked(confirmation)) == keccak256(abi.encodePacked("Y")),
             "Deployment cancelled by user"
         );
+    }
+
+    function _buildBasicConfigDisplay(
+        AbstractDeployer.TokenConfig memory tokenConfig,
+        AbstractDeployer.GovernorConfig memory governorConfig,
+        NetworkConfig memory networkConfig
+    ) internal view returns (string memory) {
+        uint256 blockTimeSeconds = networkConfig.blockTimeMilliseconds / 1000;
+
+        string memory result = string.concat(
+            "=== Deployment Configuration ===\n",
+            "Network: ",
+            networkConfig.description,
+            " (Chain ID: ",
+            vm.toString(block.chainid),
+            ")\n",
+            "Block Time: ",
+            vm.toString(networkConfig.blockTimeMilliseconds),
+            " ms\n"
+        );
+
+        result = string.concat(
+            result,
+            "\n=== Token Configuration ===\n",
+            "Token Name: ",
+            tokenConfig.name,
+            "\n",
+            "Token Symbol: ",
+            tokenConfig.symbol,
+            "\n"
+        );
+
+        result =
+            string.concat(result, "\n=== Governor Configuration ===\n", "Governor Name: ", governorConfig.name, "\n");
+
+        uint256 votingDelayMinutes = (governorConfig.votingDelay * blockTimeSeconds) / 60;
+        uint256 votingPeriodHours = (governorConfig.votingPeriod * blockTimeSeconds) / 3600;
+        uint256 extensionMinutes = (governorConfig.lateQuorumExtension * blockTimeSeconds) / 60;
+
+        result = string.concat(
+            result,
+            "Voting Delay: ",
+            vm.toString(governorConfig.votingDelay),
+            " blocks (~",
+            vm.toString(votingDelayMinutes),
+            " min)\n"
+        );
+
+        result = string.concat(
+            result,
+            "Voting Period: ",
+            vm.toString(governorConfig.votingPeriod),
+            " blocks (~",
+            vm.toString(votingPeriodHours),
+            " hours)\n"
+        );
+
+        result = string.concat(
+            result, "Quorum: ", vm.toString(governorConfig.quorumNumerator), "% of total supply required\n"
+        );
+
+        result = string.concat(
+            result,
+            "Late Quorum Ext: ",
+            vm.toString(governorConfig.lateQuorumExtension),
+            " blocks (~",
+            vm.toString(extensionMinutes),
+            " min)\n"
+        );
+
+        return string.concat(
+            result, "\n=== Ownership Configuration ===\n", "Token Owner: Governor (deployed automatically)\n"
+        );
+    }
+
+    function _buildRecipientsDisplay(RecipientInfo[] memory recipients) internal pure returns (string memory) {
+        string memory display = string.concat("\n=== Recipients (", vm.toString(recipients.length), " total) ===\n");
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            display = string.concat(
+                display,
+                vm.toString(i + 1),
+                ". ",
+                recipients[i].name,
+                "\n",
+                "   Address: ",
+                vm.toString(recipients[i].addr),
+                "\n",
+                "   Amount: ",
+                recipients[i].amount,
+                " tokens\n",
+                "   Description: ",
+                recipients[i].description,
+                "\n"
+            );
+            if (i < recipients.length - 1) {
+                display = string.concat(display, "\n");
+            }
+        }
+
+        return display;
+    }
+
+    function _buildSplitterDisplay(SplitterInfo memory splitterInfo) internal pure returns (string memory) {
+        string memory display =
+            string.concat("\n\n=== Splitter Configuration ===\n", "Description: ", splitterInfo.description, "\n");
+
+        display = string.concat(display, "Payees (", vm.toString(splitterInfo.payees.length), " total):\n");
+
+        uint256 totalShares = 0;
+        for (uint256 i = 0; i < splitterInfo.payees.length; i++) {
+            totalShares += splitterInfo.payees[i].shares;
+        }
+
+        for (uint256 i = 0; i < splitterInfo.payees.length; i++) {
+            uint256 percentage = (splitterInfo.payees[i].shares * 100) / totalShares;
+
+            string memory payeeInfo =
+                string.concat(vm.toString(i + 1), ". Address: ", vm.toString(splitterInfo.payees[i].account), "\n");
+
+            payeeInfo = string.concat(
+                payeeInfo,
+                "   Shares: ",
+                vm.toString(splitterInfo.payees[i].shares),
+                " (",
+                vm.toString(percentage),
+                "%)\n"
+            );
+
+            display = string.concat(display, payeeInfo);
+            if (i < splitterInfo.payees.length - 1) {
+                display = string.concat(display, "\n");
+            }
+        }
+
+        return display;
     }
 
     /**
@@ -1024,7 +1091,6 @@ contract Deploy is Script {
     function _deployWithConfiguration(
         AbstractDeployer.TokenConfig memory tokenConfig,
         AbstractDeployer.GovernorConfig memory governorConfig,
-        OwnerConfig memory ownerConfig,
         RecipientInfo[] memory recipients,
         SplitterInfo memory splitterInfo
     ) internal {
@@ -1033,8 +1099,8 @@ contract Deploy is Script {
             new AbstractDeployer.TokenDistribution[](recipients.length);
         for (uint256 i = 0; i < recipients.length; i++) {
             distributions[i] = AbstractDeployer.TokenDistribution({
-                recipient: recipients[i].recipientAddress,
-                amount: recipients[i].amount
+                recipient: recipients[i].addr,
+                amount: vm.parseUint(recipients[i].amount)
             });
         }
 
@@ -1071,7 +1137,7 @@ contract Deploy is Script {
         vm.startBroadcast();
 
         // Deploy using the Deployer contract
-        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions, ownerConfig.ownerAddress);
+        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions, msg.sender);
 
         vm.stopBroadcast();
 
@@ -1080,9 +1146,6 @@ contract Deploy is Script {
         = _getDeploymentDetailsFromEvents();
 
         emit ContractsPredicted(tokenAddress, governorAddress, splitterAddress);
-
-        // Verify deployment
-        _verifyDeployment(tokenAddress, governorAddress, splitterAddress);
 
         // Save deployment artifacts
         _saveDeploymentArtifacts(tokenAddress, governorAddress, splitterAddress, salt);
@@ -1123,19 +1186,17 @@ contract Deploy is Script {
     function _deployWithInteractiveConfiguration(
         AbstractDeployer.TokenConfig memory tokenConfig,
         AbstractDeployer.GovernorConfig memory governorConfig,
-        OwnerConfig memory ownerConfig,
         RecipientInfo[] memory recipients,
         SplitterInfo memory splitterInfo,
-        uint256 privateKey,
-        bool shouldVerify
+        uint256 privateKey
     ) internal {
         // Convert recipients to AbstractDeployer.TokenDistribution format
         AbstractDeployer.TokenDistribution[] memory distributions =
             new AbstractDeployer.TokenDistribution[](recipients.length);
         for (uint256 i = 0; i < recipients.length; i++) {
             distributions[i] = AbstractDeployer.TokenDistribution({
-                recipient: recipients[i].recipientAddress,
-                amount: recipients[i].amount
+                recipient: recipients[i].addr,
+                amount: vm.parseUint(recipients[i].amount)
             });
         }
 
@@ -1158,9 +1219,6 @@ contract Deploy is Script {
             "=== Ready to Deploy ===\n",
             "Deploying from wallet: ",
             vm.toString(walletAddress),
-            "\n",
-            "Verification: ",
-            shouldVerify ? "Enabled" : "Disabled",
             "\n\n",
             "Continue with deployment? (y/N)"
         );
@@ -1176,7 +1234,7 @@ contract Deploy is Script {
         vm.startBroadcast(privateKey);
 
         // Deploy using the Deployer contract
-        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions, ownerConfig.ownerAddress);
+        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions, msg.sender);
 
         vm.stopBroadcast();
 
@@ -1185,19 +1243,6 @@ contract Deploy is Script {
         = _getDeploymentDetailsFromEvents();
 
         emit ContractsPredicted(tokenAddress, governorAddress, splitterAddress);
-
-        // Verify deployment if requested
-        if (shouldVerify) {
-            string memory verifyConfirm = vm.prompt(
-                "Verifying contracts on Etherscan...\nMake sure ETHERSCAN_API_KEY environment variable is set!\n\nContinue with verification? (y/N)"
-            );
-            if (
-                keccak256(abi.encodePacked(verifyConfirm)) == keccak256(abi.encodePacked("y"))
-                    || keccak256(abi.encodePacked(verifyConfirm)) == keccak256(abi.encodePacked("Y"))
-            ) {
-                _verifyDeployment(tokenAddress, governorAddress, splitterAddress);
-            }
-        }
 
         // Save deployment artifacts
         _saveDeploymentArtifacts(tokenAddress, governorAddress, splitterAddress, salt);
@@ -1227,10 +1272,6 @@ contract Deploy is Script {
             vm.toString(salt),
             "\n"
         );
-
-        if (shouldVerify) {
-            finalSummary = string.concat(finalSummary, "Contracts verified on Etherscan\n");
-        }
 
         finalSummary = string.concat(
             finalSummary, "==========================================\n\nDeployment completed successfully!"
@@ -1266,30 +1307,6 @@ contract Deploy is Script {
                 break;
             }
         }
-    }
-
-    /**
-     * @dev Verify deployed contracts
-     */
-    function _verifyDeployment(address tokenAddress, address governorAddress, address splitterAddress) internal view {
-        // Verify token exists and has basic properties
-        Token token = Token(tokenAddress);
-        require(bytes(token.name()).length > 0, "Token name should not be empty");
-        require(bytes(token.symbol()).length > 0, "Token symbol should not be empty");
-
-        // Verify governor exists and has basic properties
-        Governor governor = Governor(payable(governorAddress));
-        require(bytes(governor.name()).length > 0, "Governor name should not be empty");
-        require(governor.votingDelay() > 0, "Governor voting delay should be greater than 0");
-        require(governor.votingPeriod() > 0, "Governor voting period should be greater than 0");
-
-        // Verify splitter if deployed
-        if (splitterAddress != address(0)) {
-            Splitter splitter = Splitter(splitterAddress);
-            require(splitter.payeesHash() != bytes32(0), "Splitter should have payees");
-        }
-
-        // Contract verification successful - no need for additional prompt
     }
 
     /**
@@ -1340,9 +1357,8 @@ contract Deploy is Script {
      */
     function getRecipientCount(string memory configPath, string memory scenario) external view returns (uint256) {
         string memory toml = vm.readFile(configPath);
-        string[] memory names =
-            vm.parseTomlStringArray(toml, string.concat(".distributions.", scenario, ".recipients[*].name"));
-        return names.length;
+        RecipientInfo[] memory recipients = _loadDistributionScenarioView(toml, scenario);
+        return recipients.length;
     }
 
     /**
@@ -1354,18 +1370,31 @@ contract Deploy is Script {
         returns (string memory name, address recipient, uint256 amount, string memory description)
     {
         string memory toml = vm.readFile(configPath);
-        string memory scenarioPath = string.concat(".distributions.", scenario);
+        RecipientInfo[] memory recipients = _loadDistributionScenarioView(toml, scenario);
 
-        string[] memory names = vm.parseTomlStringArray(toml, string.concat(scenarioPath, ".recipients[*].name"));
-        address[] memory recipients =
-            vm.parseTomlAddressArray(toml, string.concat(scenarioPath, ".recipients[*].address"));
-        uint256[] memory amounts = vm.parseTomlUintArray(toml, string.concat(scenarioPath, ".recipients[*].amount"));
-        string[] memory descriptions =
-            vm.parseTomlStringArray(toml, string.concat(scenarioPath, ".recipients[*].description"));
+        require(index < recipients.length, "Index out of bounds");
 
-        require(index < names.length, "Index out of bounds");
+        return (
+            recipients[index].name,
+            recipients[index].addr,
+            vm.parseUint(recipients[index].amount),
+            recipients[index].description
+        );
+    }
 
-        return (names[index], recipients[index], amounts[index], descriptions[index]);
+    /**
+     * @dev View-only version of _loadDistributionScenario that doesn't emit events
+     */
+    function _loadDistributionScenarioView(string memory toml, string memory scenario)
+        internal
+        view
+        returns (RecipientInfo[] memory recipients)
+    {
+        string memory scenarioPath = string.concat(".distributions.", scenario, ".recipients");
+
+        // Parse the recipients array directly
+        bytes memory recipientsRaw = vm.parseToml(toml, scenarioPath);
+        recipients = abi.decode(recipientsRaw, (RecipientInfo[]));
     }
 
     /**
@@ -1387,7 +1416,6 @@ contract Deploy is Script {
             AbstractDeployer.GovernorConfig memory governorConfig,
             ,
             ,
-            ,
             RecipientInfo[] memory recipients,
             SplitterInfo memory splitterInfo
         ) = _loadConfiguration(configPath, "", "");
@@ -1399,7 +1427,7 @@ contract Deploy is Script {
         payeeCount = splitterInfo.payees.length;
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            totalDistribution += recipients[i].amount;
+            totalDistribution += vm.parseUint(recipients[i].amount);
         }
     }
 }

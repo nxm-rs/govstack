@@ -349,7 +349,7 @@ contract TestHelper is Test {
 
         assertEq(token.name(), expectedTokenName);
         assertEq(governor.name(), expectedGovernorName);
-        assertEq(token.owner(), OWNER);
+        assertEq(token.owner(), governorAddress, "Token should be owned by Governor");
 
         if (splitterAddress != address(0)) {
             Splitter splitter = Splitter(splitterAddress);
