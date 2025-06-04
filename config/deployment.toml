@@ -16,9 +16,9 @@ name = "DAO Governor"
 voting_delay_time = "1 day"
 voting_period_time = "1 week"
 late_quorum_extension_time = "1 hour"
-# Quorum numerator (percentage of total supply needed for quorum, in bps)
-# e.g., 500 = 5% quorum
-quorum_numerator = 500
+# Quorum numerator (percentage of total supply needed for quorum)
+# e.g., 5 = 5% quorum
+quorum_numerator = 5
 
 [treasury]
 # Treasury address that receives ownership of the token contract after distribution

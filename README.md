@@ -105,7 +105,7 @@ name = "My DAO Governor"
 voting_delay_time = "2 days"
 voting_period_time = "1 week"
 late_quorum_extension_time = "6 hours"
-quorum_numerator = 500  # 5% quorum
+quorum_numerator = 5  # 5% quorum
 
 [treasury]
 address = "0x1234567890123456789012345678901234567890"
