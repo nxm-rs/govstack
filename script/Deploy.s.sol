@@ -108,12 +108,9 @@ contract Deploy is Script {
      */
     function runInteractiveWithScenario() public {
         // Prompt for all deployment configuration interactively
-        (
-            string memory configPath,
-            string memory distributionScenario,
-            string memory splitterScenario
-        ) = _promptForFullConfiguration();
-        
+        (string memory configPath, string memory distributionScenario, string memory splitterScenario) =
+            _promptForFullConfiguration();
+
         runInteractiveWithScenario(configPath, distributionScenario, splitterScenario);
     }
 
@@ -130,7 +127,7 @@ contract Deploy is Script {
     ) public {
         // Prompt for deployment configuration
         uint256 privateKey = _promptForPrivateKey();
-        
+
         // Load configuration from TOML
         (
             AbstractDeployer.TokenConfig memory tokenConfig,
@@ -152,13 +149,7 @@ contract Deploy is Script {
 
         // Deploy contracts with interactive configuration
         _deployWithInteractiveConfiguration(
-            tokenConfig, 
-            governorConfig, 
-            ownerConfig, 
-            recipients, 
-            splitterInfo, 
-            privateKey,
-            deploymentConfig.verify
+            tokenConfig, governorConfig, ownerConfig, recipients, splitterInfo, privateKey, deploymentConfig.verify
         );
     }
 
@@ -530,31 +521,30 @@ contract Deploy is Script {
      * @return distributionScenario The selected distribution scenario
      * @return splitterScenario The selected splitter scenario
      */
-    function _promptForFullConfiguration() internal returns (
-        string memory configPath,
-        string memory distributionScenario,
-        string memory splitterScenario
-    ) {
+    function _promptForFullConfiguration()
+        internal
+        returns (string memory configPath, string memory distributionScenario, string memory splitterScenario)
+    {
         console.log("=== Interactive Deployment Configuration ===");
         console.log();
-        
+
         // Dynamically discover and list config files
         configPath = _promptForConfigFile();
-        
+
         // Load the selected config to discover available scenarios
         console.log("Loading configuration to discover available scenarios...");
         console.log();
-        
+
         // Prompt for distribution scenario based on config content
         distributionScenario = _promptForDistributionScenario(configPath);
-        
+
         // Prompt for splitter scenario based on config content
         splitterScenario = _promptForSplitterScenario(configPath);
-        
+
         console.log("Configuration selection completed.");
         console.log("============================================");
         console.log();
-        
+
         return (configPath, distributionScenario, splitterScenario);
     }
 
@@ -565,7 +555,7 @@ contract Deploy is Script {
     function _promptForConfigFile() internal returns (string memory configPath) {
         console.log("Discovering configuration files in config/ directory...");
         console.log();
-        
+
         // Check if config files exist first
         if (!vm.exists("config/deployment.toml")) {
             console.log("WARNING: config/deployment.toml not found!");
@@ -573,34 +563,34 @@ contract Deploy is Script {
             configPath = vm.prompt("Enter config file path manually");
             return configPath;
         }
-        
+
         try vm.readDir("config") returns (Vm.DirEntry[] memory entries) {
             // Filter for .toml files
             string[] memory tomlFiles = new string[](entries.length);
             uint256 tomlCount = 0;
-            
+
             for (uint256 i = 0; i < entries.length; i++) {
                 if (_endsWithInternal(entries[i].path, ".toml") && !entries[i].isDir) {
                     tomlFiles[tomlCount] = entries[i].path;
                     tomlCount++;
                 }
             }
-            
+
             if (tomlCount == 0) {
                 console.log("No .toml files found in config/ directory.");
                 configPath = vm.prompt("Enter config file path manually");
                 return configPath;
             }
-            
+
             // Build file list as a single string since console.log doesn't work in interactive mode
             string memory fileList = "Available configuration files:\n";
             for (uint256 i = 0; i < tomlCount; i++) {
                 fileList = string.concat(fileList, vm.toString(i + 1), ". ", tomlFiles[i], "\n");
             }
             fileList = string.concat(fileList, "\nSelect config file (number) or enter custom path");
-            
+
             string memory choice = vm.prompt(fileList);
-            
+
             // Parse choice
             uint256 choiceNum = _parseStringToUint(choice);
             if (choiceNum > 0 && choiceNum <= tomlCount) {
@@ -608,7 +598,7 @@ contract Deploy is Script {
             } else {
                 configPath = choice; // Allow custom path
             }
-            
+
             // Validate the file exists
             try vm.readFile(configPath) {
                 console.log("Selected config:", configPath);
@@ -616,13 +606,12 @@ contract Deploy is Script {
             } catch {
                 console.log("Warning: Could not read file. Proceeding anyway...");
             }
-            
         } catch {
             console.log("Could not list config files automatically.");
             console.log("Common config files: config/deployment.toml, config/test.toml");
             configPath = vm.prompt("Enter config file path");
         }
-        
+
         return configPath;
     }
 
@@ -631,34 +620,44 @@ contract Deploy is Script {
      * @param configPath The configuration file to analyze
      * @return distributionScenario The selected distribution scenario
      */
-    function _promptForDistributionScenario(string memory configPath) internal returns (string memory distributionScenario) {
+    function _promptForDistributionScenario(string memory configPath)
+        internal
+        returns (string memory distributionScenario)
+    {
         console.log("Discovering available distribution scenarios...");
-        
+
         try vm.readFile(configPath) returns (string memory configContent) {
             // Parse distribution scenarios from config
             string[] memory scenarios = _parseDistributionScenariosInternal(configContent);
-            
+
             if (scenarios.length == 0) {
-                distributionScenario = vm.prompt("No distribution scenarios found in config file.\nEnter distribution scenario name (or press Enter for default)");
+                distributionScenario = vm.prompt(
+                    "No distribution scenarios found in config file.\nEnter distribution scenario name (or press Enter for default)"
+                );
                 return distributionScenario;
             }
-            
+
             // Build scenarios list as a single string since console.log doesn't work in interactive mode
             string memory scenariosList = string.concat("Available distribution scenarios in ", configPath, ":\n");
             for (uint256 i = 0; i < scenarios.length; i++) {
                 scenariosList = string.concat(scenariosList, vm.toString(i + 1), ". ", scenarios[i]);
-                
+
                 // Try to read scenario description
-                string memory description = _getScenarioDescriptionInternal(configContent, scenarios[i], "distributions");
+                string memory description =
+                    _getScenarioDescriptionInternal(configContent, scenarios[i], "distributions");
                 if (bytes(description).length > 0) {
                     scenariosList = string.concat(scenariosList, "\n   Description: ", description);
                 }
                 scenariosList = string.concat(scenariosList, "\n");
             }
-            scenariosList = string.concat(scenariosList, vm.toString(scenarios.length + 1), ". (Press Enter for config default)\n\nSelect distribution scenario");
-            
+            scenariosList = string.concat(
+                scenariosList,
+                vm.toString(scenarios.length + 1),
+                ". (Press Enter for config default)\n\nSelect distribution scenario"
+            );
+
             string memory choice = vm.prompt(scenariosList);
-            
+
             // Parse choice
             if (bytes(choice).length == 0) {
                 distributionScenario = "";
@@ -670,11 +669,12 @@ contract Deploy is Script {
                     distributionScenario = choice; // Allow custom input
                 }
             }
-            
         } catch {
-            distributionScenario = vm.prompt("Could not read config file for scenario discovery.\nEnter distribution scenario name (or press Enter for default)");
+            distributionScenario = vm.prompt(
+                "Could not read config file for scenario discovery.\nEnter distribution scenario name (or press Enter for default)"
+            );
         }
-        
+
         return distributionScenario;
     }
 
@@ -685,16 +685,16 @@ contract Deploy is Script {
      */
     function _promptForSplitterScenario(string memory configPath) internal returns (string memory splitterScenario) {
         console.log("Discovering available splitter scenarios...");
-        
+
         try vm.readFile(configPath) returns (string memory configContent) {
             // Parse splitter scenarios from config
             string[] memory scenarios = _parseSplitterScenariosInternal(configContent);
-            
+
             // Build scenarios list as a single string since console.log doesn't work in interactive mode
             string memory scenariosList = string.concat("Available splitter scenarios in ", configPath, ":\n");
             for (uint256 i = 0; i < scenarios.length; i++) {
                 scenariosList = string.concat(scenariosList, vm.toString(i + 1), ". ", scenarios[i]);
-                
+
                 // Try to read scenario description
                 string memory description = _getScenarioDescriptionInternal(configContent, scenarios[i], "splitter");
                 if (bytes(description).length > 0) {
@@ -702,11 +702,16 @@ contract Deploy is Script {
                 }
                 scenariosList = string.concat(scenariosList, "\n");
             }
-            scenariosList = string.concat(scenariosList, vm.toString(scenarios.length + 1), ". none - Skip splitter deployment\n");
-            scenariosList = string.concat(scenariosList, vm.toString(scenarios.length + 2), ". (Press Enter for config default)\n\nSelect splitter scenario");
-            
+            scenariosList =
+                string.concat(scenariosList, vm.toString(scenarios.length + 1), ". none - Skip splitter deployment\n");
+            scenariosList = string.concat(
+                scenariosList,
+                vm.toString(scenarios.length + 2),
+                ". (Press Enter for config default)\n\nSelect splitter scenario"
+            );
+
             string memory choice = vm.prompt(scenariosList);
-            
+
             // Parse choice
             if (bytes(choice).length == 0) {
                 splitterScenario = "";
@@ -720,11 +725,12 @@ contract Deploy is Script {
                     splitterScenario = choice; // Allow custom input
                 }
             }
-            
         } catch {
-            splitterScenario = vm.prompt("Could not read config file for scenario discovery.\nEnter splitter scenario name (none to skip, or Enter for default)");
+            splitterScenario = vm.prompt(
+                "Could not read config file for scenario discovery.\nEnter splitter scenario name (none to skip, or Enter for default)"
+            );
         }
-        
+
         return splitterScenario;
     }
 
@@ -733,7 +739,11 @@ contract Deploy is Script {
      * @param configContent The TOML config file content
      * @return scenarios Array of distribution scenario names
      */
-    function _parseDistributionScenariosInternal(string memory configContent) internal pure returns (string[] memory scenarios) {
+    function _parseDistributionScenariosInternal(string memory configContent)
+        internal
+        pure
+        returns (string[] memory scenarios)
+    {
         return _parseSectionScenarios(configContent, "distributions");
     }
 
@@ -742,7 +752,11 @@ contract Deploy is Script {
      * @param configContent The TOML config file content
      * @return scenarios Array of splitter scenario names
      */
-    function _parseSplitterScenariosInternal(string memory configContent) internal pure returns (string[] memory scenarios) {
+    function _parseSplitterScenariosInternal(string memory configContent)
+        internal
+        pure
+        returns (string[] memory scenarios)
+    {
         return _parseSectionScenarios(configContent, "splitter");
     }
 
@@ -752,14 +766,18 @@ contract Deploy is Script {
      * @param sectionType The section type ("distributions" or "splitter")
      * @return scenarios Array of scenario names
      */
-    function _parseSectionScenarios(string memory configContent, string memory sectionType) internal pure returns (string[] memory scenarios) {
+    function _parseSectionScenarios(string memory configContent, string memory sectionType)
+        internal
+        pure
+        returns (string[] memory scenarios)
+    {
         string[] memory tempScenarios = new string[](20); // Max 20 scenarios
         uint256 count = 0;
-        
+
         bytes memory content = bytes(configContent);
         string memory pattern = string.concat("[", sectionType, ".");
         bytes memory patternBytes = bytes(pattern);
-        
+
         for (uint256 i = 0; i <= content.length - patternBytes.length; i++) {
             bool matches = true;
             for (uint256 j = 0; j < patternBytes.length; j++) {
@@ -768,30 +786,32 @@ contract Deploy is Script {
                     break;
                 }
             }
-            
+
             if (matches && count < 20) {
                 // Extract scenario name
                 uint256 start = i + patternBytes.length;
                 uint256 end = start;
-                
+
                 // Find the closing ]
-                while (end < content.length && content[end] != 0x5D) { // 0x5D is ']'
+                while (end < content.length && content[end] != 0x5D) {
+                    // 0x5D is ']'
                     end++;
                 }
-                
+
                 if (end > start && end < content.length) {
                     string memory fullScenarioName = _extractStringInternal(content, start, end);
-                    
+
                     // Only include direct scenarios, not nested ones (no dots in scenario name)
                     bool hasDot = false;
                     bytes memory scenarioBytes = bytes(fullScenarioName);
                     for (uint256 k = 0; k < scenarioBytes.length; k++) {
-                        if (scenarioBytes[k] == 0x2E) { // 0x2E is '.'
+                        if (scenarioBytes[k] == 0x2E) {
+                            // 0x2E is '.'
                             hasDot = true;
                             break;
                         }
                     }
-                    
+
                     if (!hasDot) {
                         // Check if this scenario name already exists
                         bool exists = false;
@@ -801,7 +821,7 @@ contract Deploy is Script {
                                 break;
                             }
                         }
-                        
+
                         if (!exists) {
                             tempScenarios[count] = fullScenarioName;
                             count++;
@@ -810,13 +830,13 @@ contract Deploy is Script {
                 }
             }
         }
-        
+
         // Copy to properly sized array
         scenarios = new string[](count);
         for (uint256 i = 0; i < count; i++) {
             scenarios[i] = tempScenarios[i];
         }
-        
+
         return scenarios;
     }
 
@@ -827,7 +847,11 @@ contract Deploy is Script {
      * @param end End index (exclusive)
      * @return extracted The extracted string
      */
-    function _extractStringInternal(bytes memory content, uint256 start, uint256 end) internal pure returns (string memory extracted) {
+    function _extractStringInternal(bytes memory content, uint256 start, uint256 end)
+        internal
+        pure
+        returns (string memory extracted)
+    {
         bytes memory extractedBytes = new bytes(end - start);
         for (uint256 i = 0; i < end - start; i++) {
             extractedBytes[i] = content[start + i];
@@ -844,18 +868,18 @@ contract Deploy is Script {
     function _endsWithInternal(string memory str, string memory suffix) internal pure returns (bool result) {
         bytes memory strBytes = bytes(str);
         bytes memory suffixBytes = bytes(suffix);
-        
+
         if (strBytes.length < suffixBytes.length) {
             return false;
         }
-        
+
         uint256 offset = strBytes.length - suffixBytes.length;
         for (uint256 i = 0; i < suffixBytes.length; i++) {
             if (strBytes[offset + i] != suffixBytes[i]) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -874,29 +898,31 @@ contract Deploy is Script {
         bytes memory content = bytes(configContent);
         string memory sectionHeader = string.concat("[", sectionType, ".", scenarioName, "]");
         bytes memory headerBytes = bytes(sectionHeader);
-        
+
         // Find the section header
         for (uint256 i = 0; i <= content.length - headerBytes.length; i++) {
             if (_bytesMatchInternal(content, i, headerBytes)) {
                 // Look for description = "..." in the section
                 string memory descPattern = "description = \"";
                 bytes memory descPatternBytes = bytes(descPattern);
-                
+
                 for (uint256 k = i + headerBytes.length; k <= content.length - descPatternBytes.length; k++) {
                     // Stop if we hit another section starting with [
-                    if (content[k] == 0x5B) { // '[' character
+                    if (content[k] == 0x5B) {
+                        // '[' character
                         break;
                     }
-                    
+
                     if (_bytesMatchInternal(content, k, descPatternBytes)) {
                         // Extract description until closing quote
                         uint256 start = k + descPatternBytes.length;
                         uint256 end = start;
-                        
-                        while (end < content.length && content[end] != 0x22) { // 0x22 is '"'
+
+                        while (end < content.length && content[end] != 0x22) {
+                            // 0x22 is '"'
                             end++;
                         }
-                        
+
                         if (end > start) {
                             return _extractStringInternal(content, start, end);
                         }
@@ -906,7 +932,7 @@ contract Deploy is Script {
                 break;
             }
         }
-        
+
         return "";
     }
 
@@ -917,17 +943,21 @@ contract Deploy is Script {
      * @param pattern The pattern to match
      * @return matches True if pattern matches at startPos
      */
-    function _bytesMatchInternal(bytes memory content, uint256 startPos, bytes memory pattern) internal pure returns (bool matches) {
+    function _bytesMatchInternal(bytes memory content, uint256 startPos, bytes memory pattern)
+        internal
+        pure
+        returns (bool matches)
+    {
         if (startPos + pattern.length > content.length) {
             return false;
         }
-        
+
         for (uint256 i = 0; i < pattern.length; i++) {
             if (content[startPos + i] != pattern[i]) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -938,22 +968,22 @@ contract Deploy is Script {
     function _promptForPrivateKey() internal returns (uint256 privateKey) {
         console.log("=== Private Key Configuration ===");
         console.log();
-        
+
         // Prompt for private key (securely)
         console.log("Enter the private key for deployment:");
         console.log("WARNING: Use only a dedicated deployment wallet with minimal funds!");
         console.log("NEVER use your main wallet's private key for deployments!");
         console.log();
         string memory privateKeyStr = vm.promptSecret("Private Key (0x...)");
-        
+
         // Convert hex string to uint256
         privateKey = vm.parseUint(privateKeyStr);
-        
+
         console.log();
         console.log("Private key configured securely.");
         console.log("==================================");
         console.log();
-        
+
         return privateKey;
     }
 
@@ -966,11 +996,11 @@ contract Deploy is Script {
         return _parseSectionScenarios(configContent, "splitter");
     }
 
-    function _getScenarioDescription(
-        string memory configContent,
-        string memory scenarioName,
-        string memory sectionType
-    ) public pure returns (string memory) {
+    function _getScenarioDescription(string memory configContent, string memory scenarioName, string memory sectionType)
+        public
+        pure
+        returns (string memory)
+    {
         return _getScenarioDescriptionInternal(configContent, scenarioName, sectionType);
     }
 

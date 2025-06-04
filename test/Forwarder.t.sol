@@ -83,7 +83,7 @@ contract ForwarderTest is Test {
 
         // Deploy factory (which deploys its own implementation)
         factory = new GnosisForwarderFactory();
-        
+
         // Deploy test token
         testToken = new TestERC20("Test Token", "TEST");
     }
