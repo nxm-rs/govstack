@@ -302,42 +302,6 @@ contract TimeBasedTests is TestHelper {
     // ============ INTEGRATION TESTS ============
 
     /**
-     * @dev Test loading and converting time-based configuration
-     */
-    function testLoadTimeBasedConfiguration() public {
-        // Skip this test since vm.writeFile is not allowed in this environment
-        // This functionality is tested in integration tests with actual config files
-        assertTrue(true, "Test skipped - file operations not allowed");
-    }
-
-    /**
-     * @dev Test time parameter conversion events
-     */
-    function testTimeParameterConversionEvents() public {
-        // Skip this test since vm.writeFile is not allowed in this environment
-        // This functionality is tested in integration tests with actual config files
-        return;
-    }
-
-    /**
-     * @dev Test multi-network conversion with updated millisecond values
-     */
-    function testMultiNetworkConversion() public {
-        // Skip this test since vm.writeFile is not allowed in this environment
-        // This functionality is tested in integration tests with actual config files
-        return;
-    }
-
-    /**
-     * @dev Test configuration validation
-     */
-    function testConfigurationValidation() public {
-        // Skip this test since vm.writeFile is not allowed in this environment
-        // This functionality is tested in integration tests with actual config files
-        assertTrue(true, "Configuration validation passed");
-    }
-
-    /**
      * @dev Test edge cases in time conversion
      */
     function testTimeConversionEdgeCases() public view {

@@ -292,7 +292,7 @@ contract TokenSplitterTest is TestHelper {
         assertEq(calculatedHash, expectedHash);
     }
 
-    function testAddressSorting() public view {
+    function testAddressSorting() public pure {
         // Test that different input orders produce the same hash
         TokenSplitter.PayeeData[] memory payees1 = new TokenSplitter.PayeeData[](2);
         payees1[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
