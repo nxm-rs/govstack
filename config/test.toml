@@ -1,5 +1,6 @@
-# Simple Test Deployment Configuration
-# This file contains minimal parameters for quick testing of the deployment system
+# Test Configuration for Development
+# Minimal parameters with small amounts for testing and development
+# Use this config for local testing, testnets, or development workflows
 
 [token]
 name = "Test Governance Token"

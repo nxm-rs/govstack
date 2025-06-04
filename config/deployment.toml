@@ -26,10 +26,11 @@ quorum_numerator = 500
 address = "0x1234567890123456789012345678901234567890"
 
 # Distribution configurations for different scenarios
-# You can define multiple distribution scenarios and select one during deployment
+# The interactive deployment will show these scenarios with descriptions
+# Add new scenarios here and they'll automatically appear as options
 
 [distributions.default]
-# Default distribution scenario
+# Balanced governance distribution suitable for most DAOs
 description = "Standard governance token distribution"
 
 [[distributions.default.recipients]]
@@ -57,7 +58,7 @@ amount = "1500000000000000000000000"  # 1.5M tokens (15%)
 description = "Community incentives and rewards"
 
 [distributions.startup]
-# Startup-focused distribution
+# Early-stage startup allocation with founder/investor focus
 description = "Early stage startup token distribution"
 
 [[distributions.startup.recipients]]
@@ -85,7 +86,7 @@ amount = "2500000000000000000000000"  # 2.5M tokens (25%)
 description = "Public token sale allocation"
 
 [distributions.dao]
-# DAO-focused distribution
+# Decentralized protocol with heavy treasury weighting
 description = "Decentralized autonomous organization distribution"
 
 [[distributions.dao.recipients]]
@@ -113,7 +114,7 @@ amount = "1500000000000000000000000"  # 1.5M tokens (15%)
 description = "Community initiatives and events"
 
 [distributions.test]
-# Test distribution for development/testing
+# Small test amounts for development and testing
 description = "Simple test distribution for development"
 
 [[distributions.test.recipients]]
@@ -134,9 +135,11 @@ address = "0x3333333333333333333333333333333333333333"
 amount = "3000000000000000000000"  # 3000 tokens
 description = "Test recipient 3"
 
-# TokenSplitter configuration for different scenarios
+# Revenue splitter configurations for automated distribution
+# Select during deployment or set splitter_scenario = "none" to skip
+
 [splitter.default]
-# Default splitter configuration
+# Balanced operational revenue distribution
 description = "Standard dividend splitting configuration"
 
 # Payees with their share percentages (in basis points, 10000 = 100%)
@@ -157,7 +160,7 @@ account = "0x4444444444444444444444444444444444444444"
 shares = 1000  # 10% Operations
 
 [splitter.simple]
-# Simple two-way split
+# Equal partnership revenue sharing
 description = "Simple 50/50 split between two parties"
 
 [[splitter.simple.payees]]
@@ -169,7 +172,7 @@ account = "0x2222222222222222222222222222222222222222"
 shares = 5000  # 50% Partner B
 
 [splitter.revenue_share]
-# Revenue sharing configuration
+# Investor-focused revenue distribution model
 description = "Revenue sharing among stakeholders"
 
 [[splitter.revenue_share.payees]]
@@ -189,7 +192,7 @@ account = "0x4444444444444444444444444444444444444444"
 shares = 500   # 5% Reserve Fund
 
 [splitter.test]
-# Test splitter configuration
+# Simple test split for development
 description = "Test splitter for development"
 
 [[splitter.test.payees]]
@@ -215,15 +218,15 @@ block_time_milliseconds = 12000
 gas_price_gwei = 10
 gas_limit = 8000000
 
-# Deployment settings
+# Deployment settings (can be overridden by interactive selection)
 [deployment]
-# Which distribution scenario to use (default, startup, dao, test)
+# Default distribution scenario (shown as default in interactive mode)
 scenario = "default"
-# Which splitter configuration to use (default, simple, revenue_share, test, or "none" to skip splitter)
+# Default splitter scenario (use "none" to skip splitter deployment)
 splitter_scenario = "default"
 # Whether to verify contracts on Etherscan after deployment
 verify = true
-# Whether to save deployment artifacts
+# Whether to save deployment artifacts to deployments/ directory
 save_artifacts = true
 # Custom deployment salt (leave empty for auto-generated)
 custom_salt = ""
