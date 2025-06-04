@@ -78,7 +78,7 @@ contract GasTest is Script {
         vm.startBroadcast();
 
         // Deploy contracts
-        new Deployer(tokenConfig, governorConfig, emptySplitterConfig, distributions, OWNER);
+        new Deployer(tokenConfig, governorConfig, emptySplitterConfig, distributions);
 
         vm.stopBroadcast();
 
@@ -147,7 +147,7 @@ contract GasTest is Script {
         vm.startBroadcast();
 
         // Deploy contracts
-        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions, OWNER);
+        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions);
 
         vm.stopBroadcast();
 
@@ -209,7 +209,7 @@ contract GasTest is Script {
         // Verify token properties
         require(keccak256(bytes(token.name())) == keccak256(bytes(TOKEN_NAME)), "Token name mismatch");
         require(keccak256(bytes(token.symbol())) == keccak256(bytes(TOKEN_SYMBOL)), "Token symbol mismatch");
-        require(token.owner() == OWNER, "Token owner mismatch");
+        require(token.owner() == governorAddress, "Token owner should be Governor");
 
         // Verify governor properties
         require(keccak256(bytes(governor.name())) == keccak256(bytes(GOVERNOR_NAME)), "Governor name mismatch");
@@ -248,7 +248,7 @@ contract GasTest is Script {
         // Verify token properties
         require(keccak256(bytes(token.name())) == keccak256(bytes(TOKEN_NAME)), "Token name mismatch");
         require(keccak256(bytes(token.symbol())) == keccak256(bytes(TOKEN_SYMBOL)), "Token symbol mismatch");
-        require(token.owner() == OWNER, "Token owner mismatch");
+        require(token.owner() == governorAddress, "Token owner should be Governor");
 
         // Verify governor properties
         require(keccak256(bytes(governor.name())) == keccak256(bytes(GOVERNOR_NAME)), "Governor name mismatch");
@@ -301,7 +301,7 @@ contract GasTest is Script {
 
         vm.startBroadcast();
 
-        new Deployer(tokenConfig, governorConfig, emptySplitterConfig, distributions, OWNER);
+        new Deployer(tokenConfig, governorConfig, emptySplitterConfig, distributions);
 
         vm.stopBroadcast();
 

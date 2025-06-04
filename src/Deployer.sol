@@ -15,7 +15,6 @@ import "./Splitter.sol";
 /// The deployer automatically self-destructs after successful deployment, leaving only the
 /// deployed contracts.
 abstract contract AbstractDeployer {
-    error FinalOwnerZeroAddress();
     error TokenNameEmpty();
     error TokenSymbolEmpty();
     error GovernorNameEmpty();
@@ -75,15 +74,12 @@ abstract contract AbstractDeployer {
     /// @param governorConfig Configuration for the governor
     /// @param splitterConfig Configuration for the splitter
     /// @param distributions Array of initial token distributions
-    /// @param finalOwner The final owner of the token contract (receives ownership after distribution)
     constructor(
         TokenConfig memory tokenConfig,
         GovernorConfig memory governorConfig,
         SplitterConfig memory splitterConfig,
-        TokenDistribution[] memory distributions,
-        address finalOwner
+        TokenDistribution[] memory distributions
     ) {
-        require(finalOwner != address(0), FinalOwnerZeroAddress());
         require(bytes(tokenConfig.name).length > 0, TokenNameEmpty());
         require(bytes(tokenConfig.symbol).length > 0, TokenSymbolEmpty());
         require(bytes(governorConfig.name).length > 0, GovernorNameEmpty());
@@ -154,7 +150,7 @@ abstract contract AbstractDeployer {
         emit DeployerSelfDestructed(addresses);
 
         // Self-destruct the deployer contract after successful deployment
-        selfdestruct(payable(finalOwner));
+        selfdestruct(payable(addresses.governor));
     }
 
     /// @notice Internal function to generate a unique salt for CREATE2 deployment
@@ -196,9 +192,8 @@ contract Deployer is AbstractDeployer {
         TokenConfig memory tokenConfig,
         GovernorConfig memory governorConfig,
         SplitterConfig memory splitterConfig,
-        TokenDistribution[] memory distributions,
-        address finalOwner
-    ) AbstractDeployer(tokenConfig, governorConfig, splitterConfig, distributions, finalOwner) {}
+        TokenDistribution[] memory distributions
+    ) AbstractDeployer(tokenConfig, governorConfig, splitterConfig, distributions) {}
 }
 
 /// @title TestableDeployer
@@ -209,9 +204,8 @@ contract TestableDeployer is AbstractDeployer {
         TokenConfig memory tokenConfig,
         GovernorConfig memory governorConfig,
         SplitterConfig memory splitterConfig,
-        TokenDistribution[] memory distributions,
-        address finalOwner
-    ) AbstractDeployer(tokenConfig, governorConfig, splitterConfig, distributions, finalOwner) {}
+        TokenDistribution[] memory distributions
+    ) AbstractDeployer(tokenConfig, governorConfig, splitterConfig, distributions) {}
 
     /// @notice Predict deployment addresses for Token, Governor, and Splitter
     /// @param deployer The deployer address

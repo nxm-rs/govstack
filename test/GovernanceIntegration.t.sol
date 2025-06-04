@@ -68,9 +68,7 @@ contract GovernanceIntegrationTest is TestHelper {
 
         vm.recordLogs();
 
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER
-        );
+        new TestableDeployer(createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions);
 
         // Extract deployed contract addresses from deployment logs
         Vm.Log[] memory logs = vm.getRecordedLogs();

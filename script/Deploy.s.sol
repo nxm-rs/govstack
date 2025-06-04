@@ -1137,7 +1137,7 @@ contract Deploy is Script {
         vm.startBroadcast();
 
         // Deploy using the Deployer contract
-        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions, msg.sender);
+        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions);
 
         vm.stopBroadcast();
 
@@ -1234,7 +1234,7 @@ contract Deploy is Script {
         vm.startBroadcast(privateKey);
 
         // Deploy using the Deployer contract
-        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions, msg.sender);
+        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions);
 
         vm.stopBroadcast();
 

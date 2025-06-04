@@ -10,9 +10,7 @@ contract DeployerTest is TestHelper {
 
         vm.recordLogs();
 
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER
-        );
+        new TestableDeployer(createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         (address tokenAddress, address governorAddress, address splitterAddress, uint256 totalDistributed,) =
@@ -33,9 +31,7 @@ contract DeployerTest is TestHelper {
 
         vm.recordLogs();
 
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), splitterConfig, distributions, OWNER
-        );
+        new TestableDeployer(createBasicTokenConfig(), createBasicGovernorConfig(), splitterConfig, distributions);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         (address tokenAddress, address governorAddress, address splitterAddress,,) = extractDeploymentAddresses(logs);
@@ -69,14 +65,14 @@ contract DeployerTest is TestHelper {
         AbstractDeployer.SplitterConfig memory emptySplitterConfig;
         AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
 
-        testInvalidTokenConfigScenarios(createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER);
+        testInvalidTokenConfigScenarios(createBasicGovernorConfig(), emptySplitterConfig, distributions);
     }
 
     function testInvalidGovernorConfig() public {
         AbstractDeployer.SplitterConfig memory emptySplitterConfig;
         AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
 
-        testInvalidGovernorConfigScenarios(createBasicTokenConfig(), emptySplitterConfig, distributions, OWNER);
+        testInvalidGovernorConfigScenarios(createBasicTokenConfig(), emptySplitterConfig, distributions);
     }
 
     function testInvalidOwner() public {
@@ -91,9 +87,7 @@ contract DeployerTest is TestHelper {
     function testInvalidDistributions() public {
         AbstractDeployer.SplitterConfig memory emptySplitterConfig;
 
-        testInvalidDistributionScenarios(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, OWNER
-        );
+        testInvalidDistributionScenarios(createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig);
     }
 
     function testInvalidSplitterConfig() public {
@@ -109,7 +103,7 @@ contract DeployerTest is TestHelper {
         vm.recordLogs();
         vm.expectRevert(Splitter.InvalidTotalShares.selector);
         new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions, OWNER
+            createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions
         );
 
         // Invalid payee (zero address)
@@ -119,7 +113,7 @@ contract DeployerTest is TestHelper {
 
         vm.expectRevert(Splitter.InvalidShares.selector);
         new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions, OWNER
+            createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions
         );
     }
 
@@ -166,7 +160,7 @@ contract DeployerTest is TestHelper {
         vm.recordLogs();
 
         new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, emptyDistributions, OWNER
+            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, emptyDistributions
         );
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
@@ -184,9 +178,7 @@ contract DeployerTest is TestHelper {
 
         vm.recordLogs();
 
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER
-        );
+        new TestableDeployer(createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         (address tokenAddress, address governorAddress,,,) = extractDeploymentAddresses(logs);

@@ -190,25 +190,23 @@ contract TestHelper is Test {
     /// @param tokenConfig Token configuration to use
     /// @param governorConfig Governor configuration to use
     /// @param splitterConfig Splitter configuration to use
-    /// @param owner Final owner address
     function testInvalidDistributionScenarios(
         AbstractDeployer.TokenConfig memory tokenConfig,
         AbstractDeployer.GovernorConfig memory governorConfig,
-        AbstractDeployer.SplitterConfig memory splitterConfig,
-        address owner
+        AbstractDeployer.SplitterConfig memory splitterConfig
     ) internal {
         // Test zero address recipient
         AbstractDeployer.TokenDistribution[] memory invalidDistributions = new AbstractDeployer.TokenDistribution[](1);
         invalidDistributions[0] = AbstractDeployer.TokenDistribution({recipient: address(0), amount: 1000});
 
         vm.expectRevert(AbstractDeployer.RecipientZeroAddress.selector);
-        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, invalidDistributions, owner);
+        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, invalidDistributions);
 
         // Test zero amount
         invalidDistributions[0] = AbstractDeployer.TokenDistribution({recipient: USER1, amount: 0});
 
         vm.expectRevert(AbstractDeployer.AmountMustBeGreaterThanZero.selector);
-        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, invalidDistributions, owner);
+        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, invalidDistributions);
 
         // Test duplicate recipients
         AbstractDeployer.TokenDistribution[] memory duplicateDistributions = new AbstractDeployer.TokenDistribution[](2);
@@ -216,44 +214,40 @@ contract TestHelper is Test {
         duplicateDistributions[1] = AbstractDeployer.TokenDistribution({recipient: USER1, amount: 2000});
 
         vm.expectRevert(AbstractDeployer.DuplicateRecipient.selector);
-        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, duplicateDistributions, owner);
+        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, duplicateDistributions);
     }
 
     /// @notice Tests invalid token configuration scenarios
     /// @param governorConfig Governor configuration to use
     /// @param splitterConfig Splitter configuration to use
     /// @param distributions Token distributions to use
-    /// @param owner Final owner address
     function testInvalidTokenConfigScenarios(
         AbstractDeployer.GovernorConfig memory governorConfig,
         AbstractDeployer.SplitterConfig memory splitterConfig,
-        AbstractDeployer.TokenDistribution[] memory distributions,
-        address owner
+        AbstractDeployer.TokenDistribution[] memory distributions
     ) internal {
         // Test empty token name
         AbstractDeployer.TokenConfig memory invalidTokenConfig =
             AbstractDeployer.TokenConfig({name: "", symbol: TOKEN_SYMBOL});
 
         vm.expectRevert(AbstractDeployer.TokenNameEmpty.selector);
-        new TestableDeployer(invalidTokenConfig, governorConfig, splitterConfig, distributions, owner);
+        new TestableDeployer(invalidTokenConfig, governorConfig, splitterConfig, distributions);
 
         // Test empty token symbol
         invalidTokenConfig = AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: ""});
 
         vm.expectRevert(AbstractDeployer.TokenSymbolEmpty.selector);
-        new TestableDeployer(invalidTokenConfig, governorConfig, splitterConfig, distributions, owner);
+        new TestableDeployer(invalidTokenConfig, governorConfig, splitterConfig, distributions);
     }
 
     /// @notice Tests invalid governor configuration scenarios
     /// @param tokenConfig Token configuration to use
     /// @param splitterConfig Splitter configuration to use
     /// @param distributions Token distributions to use
-    /// @param owner Final owner address
     function testInvalidGovernorConfigScenarios(
         AbstractDeployer.TokenConfig memory tokenConfig,
         AbstractDeployer.SplitterConfig memory splitterConfig,
-        AbstractDeployer.TokenDistribution[] memory distributions,
-        address owner
+        AbstractDeployer.TokenDistribution[] memory distributions
     ) internal {
         // Test empty governor name
         AbstractDeployer.GovernorConfig memory invalidGovernorConfig = AbstractDeployer.GovernorConfig({
@@ -265,7 +259,7 @@ contract TestHelper is Test {
         });
 
         vm.expectRevert(AbstractDeployer.GovernorNameEmpty.selector);
-        new TestableDeployer(tokenConfig, invalidGovernorConfig, splitterConfig, distributions, owner);
+        new TestableDeployer(tokenConfig, invalidGovernorConfig, splitterConfig, distributions);
     }
 
     /// @notice Tests invalid owner scenarios
@@ -279,8 +273,8 @@ contract TestHelper is Test {
         AbstractDeployer.SplitterConfig memory splitterConfig,
         AbstractDeployer.TokenDistribution[] memory distributions
     ) internal {
-        vm.expectRevert(AbstractDeployer.FinalOwnerZeroAddress.selector);
-        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, distributions, address(0));
+        // This test is no longer relevant since finalOwner parameter was removed
+        // The Governor is automatically the owner of the token
     }
 
     function expectEmitTokensReleased(address token, address to, uint256 amount) internal {
