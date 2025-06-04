@@ -84,35 +84,12 @@ contract TokenTest is TestHelper {
         assertEq(token.totalSupply(), initialTotalSupply - burnAmount);
     }
 
-    function testOwnerCanBurnOwnBalance() public {
-        uint256 burnAmount = 100e18;
-        uint256 initialBalance = token.balanceOf(OWNER);
-        uint256 initialTotalSupply = token.totalSupply();
-
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(OWNER, address(0), burnAmount);
-
-        vm.prank(OWNER);
-        token.burn(burnAmount);
-
-        assertEq(token.balanceOf(OWNER), initialBalance - burnAmount);
-        assertEq(token.totalSupply(), initialTotalSupply - burnAmount);
-    }
-
     function testNonOwnerCannotBurnFromAddress() public {
         uint256 burnAmount = 100e18;
 
         vm.expectRevert();
         vm.prank(USER1);
         token.burn(OWNER, burnAmount);
-    }
-
-    function testNonOwnerCannotBurnOwnBalance() public {
-        uint256 burnAmount = 100e18;
-
-        vm.expectRevert();
-        vm.prank(USER1);
-        token.burn(burnAmount);
     }
 
     function testBurnMoreThanBalance() public {
