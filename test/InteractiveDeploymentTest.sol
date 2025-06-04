@@ -41,7 +41,7 @@ contract InteractiveDeploymentTest is Test {
         deployer = new Deploy();
     }
 
-    function testConfigFileDiscovery() public {
+    function testConfigFileDiscovery() public view {
         // Test that readDir works and finds our test files
         Vm.DirEntry[] memory entries = vm.readDir("config");
 
@@ -62,7 +62,7 @@ contract InteractiveDeploymentTest is Test {
         assertTrue(foundMinimal, "Should find test.toml");
     }
 
-    function testDistributionScenarioParsing() public {
+    function testDistributionScenarioParsing() public view {
         // Read the deployment config content
         string memory configContent = vm.readFile("config/deployment.toml");
 
@@ -95,7 +95,7 @@ contract InteractiveDeploymentTest is Test {
         assertTrue(foundTest, "Should find 'test' distribution scenario");
     }
 
-    function testSplitterScenarioParsing() public {
+    function testSplitterScenarioParsing() public view {
         // Read the deployment config content
         string memory configContent = vm.readFile("config/deployment.toml");
 
@@ -128,7 +128,7 @@ contract InteractiveDeploymentTest is Test {
         assertTrue(foundTest, "Should find 'test' splitter scenario");
     }
 
-    function testScenarioDescriptionExtraction() public {
+    function testScenarioDescriptionExtraction() public view {
         // Read the deployment config content
         string memory configContent = vm.readFile("config/deployment.toml");
 
@@ -175,7 +175,7 @@ contract InteractiveDeploymentTest is Test {
         );
     }
 
-    function testEmptyConfigFileParsing() public {
+    function testEmptyConfigFileParsing() public view {
         // Test parsing with just the TEST_CONFIG_CONTENT that has no splitter scenarios
         string memory emptyConfig = "[token]\nname = \"Empty\"\nsymbol = \"EMP\"\ninitial_supply = 0\n";
 
@@ -186,7 +186,7 @@ contract InteractiveDeploymentTest is Test {
         assertEq(splitterScenarios.length, 0, "Empty config should have no splitter scenarios");
     }
 
-    function testMinimalConfigParsing() public {
+    function testMinimalConfigParsing() public view {
         // Test parsing test.toml which has only test scenarios
         string memory configContent = vm.readFile("config/test.toml");
 
@@ -200,7 +200,7 @@ contract InteractiveDeploymentTest is Test {
         assertEq(testDesc, "Simple test distribution", "Should extract correct test distribution description");
     }
 
-    function testEndsWith() public {
+    function testEndsWith() public view {
         // Test the _endsWith helper function
         assertTrue(deployer._endsWith("test.toml", ".toml"), "Should detect .toml ending");
         assertTrue(deployer._endsWith("deployment.toml", ".toml"), "Should detect .toml ending in longer string");
@@ -209,7 +209,7 @@ contract InteractiveDeploymentTest is Test {
         assertFalse(deployer._endsWith("test", ".toml"), "Should not match when no suffix present");
     }
 
-    function testExtractString() public {
+    function testExtractString() public view {
         // Test the _extractString helper function
         bytes memory testData = bytes("Hello World!");
 
@@ -223,7 +223,7 @@ contract InteractiveDeploymentTest is Test {
         assertEq(extracted3, "!", "Should extract single character");
     }
 
-    function testBytesMatch() public {
+    function testBytesMatch() public view {
         // Test the _bytesMatch helper function
         bytes memory content = bytes("This is a test string for pattern matching");
         bytes memory pattern1 = bytes("This");
@@ -249,13 +249,17 @@ contract InteractiveDeploymentTest is Test {
         assertEq(deployer._parseStringToUint("123"), 123, "Should parse '123' to 123");
         assertEq(deployer._parseStringToUint("0"), 0, "Should parse '0' to 0");
 
-        // Test invalid inputs (should return 0)
+        // Test invalid inputs (should revert)
         assertEq(deployer._parseStringToUint(""), 0, "Should return 0 for empty string");
-        assertEq(deployer._parseStringToUint("abc"), 0, "Should return 0 for non-numeric string");
-        assertEq(deployer._parseStringToUint("12abc"), 0, "Should return 0 for mixed string");
+
+        vm.expectRevert("Invalid number character");
+        deployer._parseStringToUint("abc");
+
+        vm.expectRevert("Invalid number character");
+        deployer._parseStringToUint("12abc");
     }
 
-    function testDuplicateScenarioHandling() public {
+    function testDuplicateScenarioHandling() public view {
         // Create a config with duplicate scenario names (should be deduplicated)
         string memory configWithDuplicates = "[distributions.test]\n" "description = \"First test\"\n" "\n"
             "[distributions.test]\n" "description = \"Second test\"\n" "\n" "[distributions.prod]\n"
@@ -281,7 +285,7 @@ contract InteractiveDeploymentTest is Test {
         assertTrue(foundProd, "Should find 'prod' scenario");
     }
 
-    function testComplexScenarioNames() public {
+    function testComplexScenarioNames() public view {
         // Test scenarios with complex names (underscores, numbers, etc.)
         string memory complexConfig = "[distributions.scenario_1]\n"
             "description = \"Scenario with underscore and number\"\n" "\n" "[distributions.test123]\n"
@@ -310,7 +314,7 @@ contract InteractiveDeploymentTest is Test {
         );
     }
 
-    function testMissingDescription() public {
+    function testMissingDescription() public view {
         // Test scenario without description
         string memory configWithoutDesc = "[distributions.nodesc]\n" "\n" "[[distributions.nodesc.recipients]]\n"
             "name = \"Test\"\n" "address = \"0x1111111111111111111111111111111111111111\"\n" "amount = \"1000\"\n";
@@ -323,7 +327,7 @@ contract InteractiveDeploymentTest is Test {
         assertEq(desc, "", "Should return empty string for missing description");
     }
 
-    function testNonExistentScenarioDescription() public {
+    function testNonExistentScenarioDescription() public view {
         string memory configContent = vm.readFile("config/deployment.toml");
 
         string memory desc = deployer._getScenarioDescription(configContent, "nonexistent", "distributions");
@@ -333,7 +337,7 @@ contract InteractiveDeploymentTest is Test {
         assertEq(desc2, "", "Should return empty string for non-existent section type");
     }
 
-    function testFullConfigDiscoveryWorkflow() public {
+    function testFullConfigDiscoveryWorkflow() public view {
         // Test the complete workflow: discover files -> read content -> parse scenarios -> extract descriptions
 
         // 1. Discover config files
@@ -380,7 +384,7 @@ contract InteractiveDeploymentTest is Test {
         assertTrue(foundDao, "Should find 'dao' distribution scenario");
     }
 
-    function testConfigFileFilteringAndParsing() public {
+    function testConfigFileFilteringAndParsing() public view {
         // Test that only .toml files are selected and parsed correctly
         Vm.DirEntry[] memory entries = vm.readDir("config");
 
@@ -406,7 +410,7 @@ contract InteractiveDeploymentTest is Test {
         assertEq(tomlCount, 3, "Should find exactly 3 .toml files");
     }
 
-    function testFallbackConfigValidation() public {
+    function testFallbackConfigValidation() public view {
         // Test that common config files exist and are readable (fallback scenario)
         string[] memory commonConfigs = new string[](3);
         commonConfigs[0] = "config/deployment.toml";

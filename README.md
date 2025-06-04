@@ -240,7 +240,7 @@ forge coverage
 
 ### Test Results
 
-- **87 total tests** across 5 test suites
+- **162 total tests** across 5 test suites
 - **100% pass rate**
 - **Comprehensive coverage** of all governance scenarios
 - **Time-based testing** with millisecond precision

@@ -332,6 +332,7 @@ contract Deploy is Script {
         // Extract number part
         string memory numberStr = _substring(timeStr, 0, spaceIndex);
         uint256 number = _parseStringToUint(numberStr);
+        require(number > 0 || keccak256(bytes(numberStr)) == keccak256(bytes("0")), "Invalid number character");
 
         // Extract unit part
         string memory unit = _substring(timeStr, spaceIndex + 1, timeBytes.length);
@@ -409,7 +410,7 @@ contract Deploy is Script {
         for (uint256 i = 0; i < strBytes.length; i++) {
             uint8 digit = uint8(strBytes[i]);
             if (digit < 48 || digit > 57) {
-                return 0; // Return 0 for invalid characters instead of reverting
+                revert("Invalid number character");
             }
             result = result * 10 + (digit - 48);
         }
