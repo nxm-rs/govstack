@@ -114,29 +114,6 @@ contract GnosisChainForwarder is Forwarder {
         return _isValidBridgedToken(token);
     }
 
-    /// @notice Emergency function to recover tokens if bridge fails
-    /// @dev Only callable by the mainnet recipient (acts as admin)
-    /// @param token The token to recover
-    /// @param to The address to send recovered tokens to
-    function emergencyRecover(address token, address to) external onlyInitialized {
-        require(msg.sender == mainnetRecipient, "Only recipient can recover");
-        require(to != address(0), "Invalid recovery address");
-
-        if (token == address(0)) {
-            // Recover native tokens
-            uint256 balance = address(this).balance;
-            if (balance > 0) {
-                to.safeTransferETH(balance);
-            }
-        } else {
-            // Recover ERC20 tokens
-            uint256 balance = ERC20(token).balanceOf(address(this));
-            if (balance > 0) {
-                token.safeTransfer(to, balance);
-            }
-        }
-    }
-
     /// @notice Allow arbitrary calls to be made by authorized senders.
     function arbitraryCall(address sender, uint256 value, bytes calldata callData)
         external
