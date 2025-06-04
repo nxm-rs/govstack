@@ -80,6 +80,7 @@ contract TestHelper is Test {
     uint256 public constant VOTING_PERIOD = 1000;
     uint256 public constant QUORUM_NUMERATOR = 50;
     uint48 public constant LATE_QUORUM_EXTENSION = 64;
+    uint256 public constant PROPOSAL_THRESHOLD = 1;
 
     // Events to match contract events
     event TokensReleased(address indexed token, address indexed to, uint256 amount);
@@ -124,7 +125,8 @@ contract TestHelper is Test {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: PROPOSAL_THRESHOLD
         });
     }
 
@@ -255,7 +257,8 @@ contract TestHelper is Test {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: PROPOSAL_THRESHOLD
         });
 
         vm.expectRevert(AbstractDeployer.GovernorNameEmpty.selector);

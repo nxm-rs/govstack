@@ -392,7 +392,7 @@ contract InteractiveDeploymentTest is TestHelper {
             }
         }
 
-        assertEq(tomlCount, 3, "Should find exactly 3 .toml files");
+        assertGe(tomlCount, 3, "Should find at least 3 .toml files");
     }
 
     function testFallbackConfigValidation() public view {

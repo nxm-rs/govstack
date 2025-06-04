@@ -19,6 +19,8 @@ late_quorum_extension_time = "1 hour"
 # Quorum numerator (percentage of total supply needed for quorum)
 # e.g., 5 = 5% quorum
 quorum_numerator = 5
+# Proposal threshold (minimum tokens needed to create proposal)
+proposal_threshold = 1
 
 # Distribution configurations for different scenarios
 # The interactive deployment will show these scenarios with descriptions

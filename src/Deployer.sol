@@ -35,6 +35,7 @@ abstract contract AbstractDeployer {
         uint256 votingPeriod;
         uint256 quorumNumerator;
         uint48 lateQuorumExtension;
+        uint256 proposalThreshold;
     }
 
     struct SplitterConfig {
@@ -106,7 +107,8 @@ abstract contract AbstractDeployer {
                 governorConfig.votingDelay,
                 governorConfig.votingPeriod,
                 governorConfig.quorumNumerator,
-                governorConfig.lateQuorumExtension
+                governorConfig.lateQuorumExtension,
+                governorConfig.proposalThreshold
             )
         );
         emit GovernorDeployed(addresses.governor, governorConfig.name, addresses.token);

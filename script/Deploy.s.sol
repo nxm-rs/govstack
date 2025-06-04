@@ -50,6 +50,7 @@ contract Deploy is Script {
         string votingPeriodTime;
         string lateQuorumExtensionTime;
         uint256 quorumNumerator;
+        uint256 proposalThreshold;
     }
 
     // Token decimals constant (standard ERC20 uses 18 decimals)
@@ -206,7 +207,16 @@ contract Deploy is Script {
     {
         string memory toml = vm.readFile(configPath);
 
-        // Load basic configurations
+        deploymentConfig.scenario = bytes(distributionScenario).length > 0
+            ? distributionScenario
+            : vm.parseTomlString(toml, ".deployment.scenario");
+        deploymentConfig.splitterScenario = bytes(splitterScenario).length > 0
+            ? splitterScenario
+            : vm.parseTomlString(toml, ".deployment.splitter_scenario");
+        deploymentConfig.saveArtifacts = vm.parseTomlBool(toml, ".deployment.save_artifacts");
+        deploymentConfig.customSalt = vm.parseTomlString(toml, ".deployment.custom_salt");
+
+        // Load base configurations
         tokenConfig.name = vm.parseTomlString(toml, ".token.name");
         tokenConfig.symbol = vm.parseTomlString(toml, ".token.symbol");
 
@@ -217,15 +227,57 @@ contract Deploy is Script {
         timeBasedConfig.votingPeriodTime = vm.parseTomlString(toml, ".governor.voting_period_time");
         timeBasedConfig.lateQuorumExtensionTime = vm.parseTomlString(toml, ".governor.late_quorum_extension_time");
         timeBasedConfig.quorumNumerator = vm.parseTomlUint(toml, ".governor.quorum_numerator");
+        timeBasedConfig.proposalThreshold = vm.parseTomlUint(toml, ".governor.proposal_threshold");
 
-        deploymentConfig.scenario = bytes(distributionScenario).length > 0
-            ? distributionScenario
-            : vm.parseTomlString(toml, ".deployment.scenario");
-        deploymentConfig.splitterScenario = bytes(splitterScenario).length > 0
-            ? splitterScenario
-            : vm.parseTomlString(toml, ".deployment.splitter_scenario");
-        deploymentConfig.saveArtifacts = vm.parseTomlBool(toml, ".deployment.save_artifacts");
-        deploymentConfig.customSalt = vm.parseTomlString(toml, ".deployment.custom_salt");
+        // Apply scenario-specific overrides
+        string memory scenarioTokenPath = string.concat(".distributions.", deploymentConfig.scenario, ".token");
+        string memory scenarioGovernorPath = string.concat(".distributions.", deploymentConfig.scenario, ".governor");
+
+        // Check if scenario has token overrides
+        try vm.parseTomlString(toml, string.concat(scenarioTokenPath, ".name")) returns (string memory scenarioTokenName) {
+            if (bytes(scenarioTokenName).length > 0) {
+                tokenConfig.name = scenarioTokenName;
+            }
+        } catch {}
+
+        try vm.parseTomlString(toml, string.concat(scenarioTokenPath, ".symbol")) returns (string memory scenarioTokenSymbol) {
+            if (bytes(scenarioTokenSymbol).length > 0) {
+                tokenConfig.symbol = scenarioTokenSymbol;
+            }
+        } catch {}
+
+        // Check if scenario has governor overrides
+        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".name")) returns (string memory scenarioGovernorName) {
+            if (bytes(scenarioGovernorName).length > 0) {
+                timeBasedConfig.name = scenarioGovernorName;
+            }
+        } catch {}
+
+        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".voting_delay_time")) returns (string memory scenarioVotingDelayTime) {
+            if (bytes(scenarioVotingDelayTime).length > 0) {
+                timeBasedConfig.votingDelayTime = scenarioVotingDelayTime;
+            }
+        } catch {}
+
+        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".voting_period_time")) returns (string memory scenarioVotingPeriodTime) {
+            if (bytes(scenarioVotingPeriodTime).length > 0) {
+                timeBasedConfig.votingPeriodTime = scenarioVotingPeriodTime;
+            }
+        } catch {}
+
+        try vm.parseTomlString(toml, string.concat(scenarioGovernorPath, ".late_quorum_extension_time")) returns (string memory scenarioLateQuorumExtensionTime) {
+            if (bytes(scenarioLateQuorumExtensionTime).length > 0) {
+                timeBasedConfig.lateQuorumExtensionTime = scenarioLateQuorumExtensionTime;
+            }
+        } catch {}
+
+        try vm.parseTomlUint(toml, string.concat(scenarioGovernorPath, ".quorum_numerator")) returns (uint256 scenarioQuorumNumerator) {
+            timeBasedConfig.quorumNumerator = scenarioQuorumNumerator;
+        } catch {}
+
+        try vm.parseTomlUint(toml, string.concat(scenarioGovernorPath, ".proposal_threshold")) returns (uint256 scenarioProposalThreshold) {
+            timeBasedConfig.proposalThreshold = scenarioProposalThreshold;
+        } catch {}
 
         // Load network configuration
         networkConfig = _loadNetworkConfig(toml);
@@ -274,6 +326,7 @@ contract Deploy is Script {
     ) public returns (AbstractDeployer.GovernorConfig memory governorConfig) {
         governorConfig.name = timeBasedConfig.name;
         governorConfig.quorumNumerator = timeBasedConfig.quorumNumerator;
+        governorConfig.proposalThreshold = timeBasedConfig.proposalThreshold;
 
         // Convert time strings to blocks
         uint256 votingDelayBlocks =

@@ -13,9 +13,8 @@ name = "Test Governor"
 voting_delay_time = "5 minutes"        # Very short for testing
 voting_period_time = "2 hours"         # Short voting period for testing
 late_quorum_extension_time = "10 minutes"  # Short extension for testing
-quorum_numerator = 100   # 1% quorum for testing
-
-
+quorum_numerator = 1   # 1% quorum for testing
+proposal_threshold = 1   # 1 token needed to create proposal
 
 [distributions.test]
 description = "Simple test distribution"

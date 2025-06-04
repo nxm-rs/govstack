@@ -26,12 +26,13 @@ contract Governor is
         uint256 initialVotingDelay,
         uint256 initialVotingPeriod,
         uint256 quorumPercentage,
-        uint48 lateQuorumExtension
+        uint48 lateQuorumExtension,
+        uint256 initialProposalThreshold
     )
         OZGovernor(name)
         GovernorVotes(IVotes(token))
         GovernorVotesQuorumFraction(quorumPercentage)
-        GovernorSettings(uint48(initialVotingDelay), uint32(initialVotingPeriod), 1)
+        GovernorSettings(uint48(initialVotingDelay), uint32(initialVotingPeriod), initialProposalThreshold)
         GovernorPreventLateQuorum(lateQuorumExtension)
     {}
 

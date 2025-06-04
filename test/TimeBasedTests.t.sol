@@ -166,7 +166,8 @@ contract TimeBasedTests is TestHelper {
             votingDelayTime: "1 day",
             votingPeriodTime: "1 week",
             lateQuorumExtensionTime: "1 hour",
-            quorumNumerator: 500
+            quorumNumerator: 500,
+            proposalThreshold: 1
         });
 
         // Create a mock network config for Ethereum
@@ -201,7 +202,8 @@ contract TimeBasedTests is TestHelper {
             votingDelayTime: "2 days",
             votingPeriodTime: "1 week",
             lateQuorumExtensionTime: "6 hours",
-            quorumNumerator: 1000
+            quorumNumerator: 1000,
+            proposalThreshold: 1
         });
 
         // Test Ethereum (12s blocks)
@@ -253,7 +255,8 @@ contract TimeBasedTests is TestHelper {
             votingDelayTime: "1 day",
             votingPeriodTime: "1 week",
             lateQuorumExtensionTime: "1 hour",
-            quorumNumerator: 500
+            quorumNumerator: 500,
+            proposalThreshold: 1
         });
 
         Deploy.NetworkConfig memory networkConfig = Deploy.NetworkConfig({

@@ -59,7 +59,8 @@ contract GasTest is Script {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: 1
         });
 
         // Create token distributions
@@ -120,7 +121,8 @@ contract GasTest is Script {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: 1
         });
 
         // Create token distributions
@@ -281,7 +283,8 @@ contract GasTest is Script {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: 1
         });
 
         // Create many token distributions (10 recipients)
