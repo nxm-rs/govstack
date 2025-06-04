@@ -76,5 +76,5 @@ interface IAMBBridge {
     function messageSender() external view returns (address);
 
     /// @notice Message's originating chain id.
-    function messageSourceChainId() external view returns (uint);
+    function messageSourceChainId() external view returns (uint256);
 }

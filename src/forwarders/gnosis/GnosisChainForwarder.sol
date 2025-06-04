@@ -135,7 +135,7 @@ contract GnosisChainForwarder is Forwarder {
     }
 
     /// @notice Allow arbitrary calls to be made by authorized senders.
-    function arbitraryCall(address sender, uint value, bytes calldata callData) external onlyInitialized {
+    function arbitraryCall(address sender, uint256 value, bytes calldata callData) external onlyInitialized {
         if (
             msg.sender == mainnetRecipient
                 || (
