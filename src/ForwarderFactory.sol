@@ -58,14 +58,6 @@ abstract contract ForwarderFactory {
         return LibClone.predictDeterministicAddress(implementation, salt, address(this));
     }
 
-    /// @notice Check if a forwarder exists for the given recipient
-    /// @param mainnetRecipient The mainnet address
-    /// @return True if the forwarder exists (has code deployed)
-    function forwarderExists(address mainnetRecipient) external view returns (bool) {
-        address predicted = predictForwarderAddress(mainnetRecipient);
-        return predicted.code.length > 0;
-    }
-
     /// @notice Deploy forwarder if it doesn't exist, otherwise return existing address
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return forwarder The address of the forwarder contract

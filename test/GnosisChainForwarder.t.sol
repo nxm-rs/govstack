@@ -164,19 +164,6 @@ contract GnosisForwarderForkTest is Test {
         assertEq(address(forwarder).balance, initialBalance + 2 ether);
     }
 
-    function testGetBalance() public {
-        TestERC20 testToken = new TestERC20("Test Token", "TEST");
-
-        // Mint tokens to forwarder
-        testToken.mint(address(forwarder), 100 ether);
-
-        // Send some native tokens
-        vm.deal(address(forwarder), 5 ether);
-
-        assertEq(forwarder.getBalance(address(testToken)), 100 ether);
-        assertEq(forwarder.getBalance(address(0)), 5 ether);
-    }
-
     function testTokenValidation() public {
         TestERC20 testToken = new TestERC20("Test Token", "TEST");
 
@@ -257,7 +244,6 @@ contract GnosisForwarderForkTest is Test {
         deal(USDC_GNOSIS, address(forwarder), 1000 * 10 ** 6); // 1000 USDC (6 decimals)
 
         assertEq(usdc.balanceOf(address(forwarder)), 1000 * 10 ** 6);
-        assertEq(forwarder.getBalance(USDC_GNOSIS), 1000 * 10 ** 6);
     }
 
     function testMultipleTokenTypes() public {
@@ -272,9 +258,9 @@ contract GnosisForwarderForkTest is Test {
         vm.deal(address(forwarder), 3 ether);
 
         // Check balances
-        assertEq(forwarder.getBalance(address(testToken)), 500 ether);
-        assertEq(forwarder.getBalance(WETH_GNOSIS), 2 ether);
-        assertEq(forwarder.getBalance(address(0)), 3 ether);
+        assertEq(testToken.balanceOf(address(forwarder)), 500 ether);
+        assertEq(ERC20(WETH_GNOSIS).balanceOf(address(forwarder)), 2 ether);
+        assertEq(address(forwarder).balance, 3 ether);
     }
 
     function testChainIdValidation() public view {

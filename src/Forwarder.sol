@@ -125,16 +125,6 @@ abstract contract Forwarder {
         }
     }
 
-    /// @notice Get the balance of a specific token
-    /// @param token The token address (use address(0) for native token)
-    /// @return The balance of the token
-    function getBalance(address token) external view returns (uint256) {
-        if (token == address(0)) {
-            return address(this).balance;
-        }
-        return ERC20(token).balanceOf(address(this));
-    }
-
     /// @notice Emergency function to recover tokens if bridge fails
     /// @dev Only callable by the mainnet recipient (acts as admin)
     /// @param token The token to recover

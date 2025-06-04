@@ -113,7 +113,8 @@ contract DeployGnosisForwarder is Script {
             console.log("Deploying forwarder for recipient:", recipient);
 
             // Check if already deployed
-            if (factory.forwarderExists(recipient)) {
+            address predictedAddress = factory.predictForwarderAddress(recipient);
+            if (predictedAddress.code.length > 0) {
                 console.log("Forwarder already exists for recipient:", recipient);
                 continue;
             }

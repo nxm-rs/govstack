@@ -303,19 +303,6 @@ contract ForwarderTest is Test {
         forwarder.batchForwardTokens(tokens);
     }
 
-    function testGetBalance() public {
-        TestForwarder forwarder = new TestForwarder();
-        forwarder.initialize(mainnetRecipient);
-
-        // Test ERC20 balance
-        deal(address(testToken), address(forwarder), 1000e18);
-        assertEq(forwarder.getBalance(address(testToken)), 1000e18);
-
-        // Test native balance
-        vm.deal(address(forwarder), 1 ether);
-        assertEq(forwarder.getBalance(address(0)), 1 ether);
-    }
-
     function testUninitializedForwarderFails() public {
         TestForwarder uninitializedForwarder = new TestForwarder();
 
