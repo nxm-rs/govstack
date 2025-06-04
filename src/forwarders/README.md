@@ -1,5 +1,3 @@
-governance/src/forwarders/README.md
-```
 # Token Forwarder System
 
 A deterministic token forwarding system for bridging tokens from Gnosis Chain (and other L2s) to Ethereum mainnet, using canonical bridges and minimal proxy deployment.

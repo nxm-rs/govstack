@@ -7,7 +7,7 @@ A comprehensive Solidity-based governance system built with Foundry, featuring c
 This system provides a complete governance infrastructure consisting of three main contracts deployed atomically:
 
 1. **Token.sol** - ERC20 governance token with voting capabilities (ERC20Votes)
-2. **TokenGovernor.sol** - OpenZeppelin-based governor contract for DAO governance
+2. **Governor.sol** - OpenZeppelin-based governor contract for DAO governance
 3. **TokenSplitter.sol** - Revenue/dividend distribution contract among stakeholders
 
 All contracts are deployed through a single `Deploy.s.sol` script that uses TOML configuration files for complete customization. The deployment system supports time-based governance parameters with millisecond precision for accurate cross-network deployment.
@@ -351,6 +351,16 @@ forge coverage
 - **Atomic deployment** ensures all-or-nothing contract creation
 - **Comprehensive testing** with edge case coverage
 
+## :warning: Security Notes
+
+> **Warning**
+>
+> These contracts have **not been audited**. Use at your own risk.
+>
+> - The code is provided as-is and may contain bugs or vulnerabilities.
+> - Do not use in production or with mainnet funds unless you have performed your own thorough security review and/or audit.
+> - The Nexum Contributors and maintainers take no responsibility for any loss of funds or damages resulting from the use of this code.
+
 ## Deployment Artifacts
 
 After deployment, artifacts are saved to `deployments/chainId_timestamp.json`:
@@ -480,25 +490,19 @@ forge fmt
 
 ## License
 
-AGPL-3.0-or-later
+This project is licensed under the AGPL-3.0-or-later license.  
+See the [LICENCE](./LICENCE) file for the full license text.
 
 ## Support
 
 For questions, issues, or feature requests:
 - Open an issue in the repository
-- Check existing documentation in the `README_*.md` files
 - Review test files for usage examples
 - Contact the development team
 
 ---
 
-## Migration Guide
+## Forwarder System
 
-If migrating from the previous token-only system:
+For details on the deterministic token forwarding system and cross-chain bridging, see [src/forwarders/README.md](src/forwarders/README.md).
 
-1. **Update Configuration**: Convert hardcoded parameters to TOML format
-2. **Test Deployment**: Deploy to testnet first with new system
-3. **Verify Governance**: Test proposal creation, voting, and execution
-4. **Update Scripts**: Modify any existing deployment scripts
-
-This governance stack provides a complete foundation for decentralized organizations with professional-grade deployment tools and comprehensive testing coverage.
