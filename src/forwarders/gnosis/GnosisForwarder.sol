@@ -8,7 +8,7 @@ import {IOmnibridge, IxDaiBridge, IBridgedToken, IAMBBridge} from "./interfaces/
 /// @title GnosisChainForwarder
 /// @notice Concrete implementation of Forwarder for Gnosis Chain using Omnibridge/AMB
 /// @dev Forwards tokens from Gnosis Chain to Ethereum mainnet via the canonical bridge
-contract GnosisChainForwarder is Forwarder {
+contract GnosisForwarder is Forwarder {
     using SafeTransferLib for address;
 
     /// @notice The Omnibridge contract address on Gnosis Chain

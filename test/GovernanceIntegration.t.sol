@@ -3,6 +3,7 @@ pragma solidity ^0.8;
 
 import "./TestHelper.sol";
 import "../src/Deployer.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 
 /**
  * @title GovernanceIntegrationTest
@@ -22,8 +23,8 @@ import "../src/Deployer.sol";
  */
 contract GovernanceIntegrationTest is TestHelper {
     Token public token;
-    TokenGovernor public governor;
-    TokenSplitter public splitter;
+    Governor public governor;
+    Splitter public splitter;
 
     // Test addresses with predefined voting power distribution
     address public constant PROPOSER = address(0x10); // 10% voting power
@@ -76,9 +77,9 @@ contract GovernanceIntegrationTest is TestHelper {
         (address tokenAddress, address governorAddress, address splitterAddress,,) = extractDeploymentAddresses(logs);
 
         token = Token(tokenAddress);
-        governor = TokenGovernor(payable(governorAddress));
+        governor = Governor(payable(governorAddress));
         if (splitterAddress != address(0)) {
-            splitter = TokenSplitter(splitterAddress);
+            splitter = Splitter(splitterAddress);
         }
 
         // Critical: Delegate voting power to self for all token holders

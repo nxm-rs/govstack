@@ -204,7 +204,7 @@ contract GasTest is Script {
         require(governorAddress != address(0), "Governor address is zero");
 
         Token token = Token(tokenAddress);
-        TokenGovernor governor = TokenGovernor(payable(governorAddress));
+        Governor governor = Governor(payable(governorAddress));
 
         // Verify token properties
         require(keccak256(bytes(token.name())) == keccak256(bytes(TOKEN_NAME)), "Token name mismatch");
@@ -242,8 +242,8 @@ contract GasTest is Script {
         require(splitterAddress != address(0), "Splitter address is zero");
 
         Token token = Token(tokenAddress);
-        TokenGovernor governor = TokenGovernor(payable(governorAddress));
-        TokenSplitter splitter = TokenSplitter(splitterAddress);
+        Governor governor = Governor(payable(governorAddress));
+        Splitter splitter = Splitter(splitterAddress);
 
         // Verify token properties
         require(keccak256(bytes(token.name())) == keccak256(bytes(TOKEN_NAME)), "Token name mismatch");

@@ -4,7 +4,7 @@ pragma solidity ^0.8;
 import "./TestHelper.sol";
 
 contract TokenSplitterTest is TestHelper {
-    TokenSplitter public splitter;
+    Splitter public splitter;
     TestERC20 public token1;
     TestERC20 public token2;
 
@@ -19,12 +19,12 @@ contract TokenSplitterTest is TestHelper {
         token2 = deployMockToken();
 
         // Create splitter with dedicated owner
-        splitter = new TokenSplitter(owner);
+        splitter = new Splitter(owner);
 
         // Create packed payees data (60/40 split)
-        TokenSplitter.PayeeData[] memory payees = new TokenSplitter.PayeeData[](2);
-        payees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000}); // 60%
-        payees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000}); // 40%
+        Splitter.PayeeData[] memory payees = new Splitter.PayeeData[](2);
+        payees[0] = Splitter.PayeeData({payee: PAYEE1, shares: 6000}); // 60%
+        payees[1] = Splitter.PayeeData({payee: PAYEE2, shares: 4000}); // 40%
 
         packedPayeesData = _createPackedPayeesData(payees);
         expectedHash = _calculatePayeesHash(payees);
@@ -58,43 +58,43 @@ contract TokenSplitterTest is TestHelper {
 
     function testUpdatePayeesValidation() public {
         // Test empty calldata
-        vm.expectRevert(TokenSplitter.EmptyCalldata.selector);
+        vm.expectRevert(Splitter.EmptyCalldata.selector);
         vm.prank(owner);
         splitter.updatePayees("");
 
         // Test invalid calldata length (not multiple of 22)
         bytes memory invalidData = new bytes(23);
-        vm.expectRevert(TokenSplitter.InvalidCalldataLength.selector);
+        vm.expectRevert(Splitter.InvalidCalldataLength.selector);
         vm.prank(owner);
         splitter.updatePayees(invalidData);
 
         // Test zero address
-        TokenSplitter.PayeeData[] memory invalidPayees = new TokenSplitter.PayeeData[](2);
-        invalidPayees[0] = TokenSplitter.PayeeData({payee: address(0), shares: 5000});
-        invalidPayees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 5000});
+        Splitter.PayeeData[] memory invalidPayees = new Splitter.PayeeData[](2);
+        invalidPayees[0] = Splitter.PayeeData({payee: address(0), shares: 5000});
+        invalidPayees[1] = Splitter.PayeeData({payee: PAYEE2, shares: 5000});
 
         bytes memory invalidPackedData = _createPackedPayeesData(invalidPayees);
-        vm.expectRevert(TokenSplitter.InvalidShares.selector);
+        vm.expectRevert(Splitter.InvalidShares.selector);
         vm.prank(owner);
         splitter.updatePayees(invalidPackedData);
 
         // Test zero shares
-        TokenSplitter.PayeeData[] memory zeroSharesPayees = new TokenSplitter.PayeeData[](2);
-        zeroSharesPayees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 0});
-        zeroSharesPayees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 10000});
+        Splitter.PayeeData[] memory zeroSharesPayees = new Splitter.PayeeData[](2);
+        zeroSharesPayees[0] = Splitter.PayeeData({payee: PAYEE1, shares: 0});
+        zeroSharesPayees[1] = Splitter.PayeeData({payee: PAYEE2, shares: 10000});
 
         bytes memory zeroSharesData = _createPackedPayeesData(zeroSharesPayees);
-        vm.expectRevert(TokenSplitter.InvalidShares.selector);
+        vm.expectRevert(Splitter.InvalidShares.selector);
         vm.prank(owner);
         splitter.updatePayees(zeroSharesData);
 
         // Test shares not totaling 10000
-        TokenSplitter.PayeeData[] memory wrongTotalPayees = new TokenSplitter.PayeeData[](2);
-        wrongTotalPayees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 3000});
-        wrongTotalPayees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000}); // 7000 total
+        Splitter.PayeeData[] memory wrongTotalPayees = new Splitter.PayeeData[](2);
+        wrongTotalPayees[0] = Splitter.PayeeData({payee: PAYEE1, shares: 3000});
+        wrongTotalPayees[1] = Splitter.PayeeData({payee: PAYEE2, shares: 4000}); // 7000 total
 
         bytes memory wrongTotalData = _createPackedPayeesData(wrongTotalPayees);
-        vm.expectRevert(TokenSplitter.InvalidTotalShares.selector);
+        vm.expectRevert(Splitter.InvalidTotalShares.selector);
         vm.prank(owner);
         splitter.updatePayees(wrongTotalData);
     }
@@ -143,20 +143,20 @@ contract TokenSplitterTest is TestHelper {
 
     function testSplitTokenValidation() public {
         // Test zero amount
-        vm.expectRevert(TokenSplitter.ZeroAmount.selector);
+        vm.expectRevert(Splitter.ZeroAmount.selector);
         splitter.splitToken(address(token1), 0, packedPayeesData);
 
         // Test empty calldata
-        vm.expectRevert(TokenSplitter.EmptyCalldata.selector);
+        vm.expectRevert(Splitter.EmptyCalldata.selector);
         splitter.splitToken(address(token1), 1000, "");
 
         // Test wrong hash
-        TokenSplitter.PayeeData[] memory wrongPayees = new TokenSplitter.PayeeData[](2);
-        wrongPayees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 5000});
-        wrongPayees[1] = TokenSplitter.PayeeData({payee: PAYEE3, shares: 5000});
+        Splitter.PayeeData[] memory wrongPayees = new Splitter.PayeeData[](2);
+        wrongPayees[0] = Splitter.PayeeData({payee: PAYEE1, shares: 5000});
+        wrongPayees[1] = Splitter.PayeeData({payee: PAYEE3, shares: 5000});
 
         bytes memory wrongData = _createPackedPayeesData(wrongPayees);
-        vm.expectRevert(TokenSplitter.InvalidPayeesHash.selector);
+        vm.expectRevert(Splitter.InvalidPayeesHash.selector);
         splitter.splitToken(address(token1), 1000, wrongData);
     }
 
@@ -217,13 +217,13 @@ contract TokenSplitterTest is TestHelper {
 
     function testThreeWaySplit() public {
         // Create a 3-way split: 50%, 30%, 20%
-        TokenSplitter.PayeeData[] memory payees = new TokenSplitter.PayeeData[](3);
-        payees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 5000}); // 50%
-        payees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 3000}); // 30%
-        payees[2] = TokenSplitter.PayeeData({payee: PAYEE3, shares: 2000}); // 20%
+        Splitter.PayeeData[] memory payees = new Splitter.PayeeData[](3);
+        payees[0] = Splitter.PayeeData({payee: PAYEE1, shares: 5000}); // 50%
+        payees[1] = Splitter.PayeeData({payee: PAYEE2, shares: 3000}); // 30%
+        payees[2] = Splitter.PayeeData({payee: PAYEE3, shares: 2000}); // 20%
 
         address threeWayOwner = address(0x456);
-        TokenSplitter threeWaySplitter = new TokenSplitter(threeWayOwner);
+        Splitter threeWaySplitter = new Splitter(threeWayOwner);
         bytes memory threeWayData = _createPackedPayeesData(payees);
 
         vm.prank(threeWayOwner);
@@ -244,9 +244,9 @@ contract TokenSplitterTest is TestHelper {
 
     function testUpdatePayees() public {
         // Create new payees configuration (30/70 split)
-        TokenSplitter.PayeeData[] memory newPayees = new TokenSplitter.PayeeData[](2);
-        newPayees[0] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 3000}); // 30%
-        newPayees[1] = TokenSplitter.PayeeData({payee: PAYEE3, shares: 7000}); // 70%
+        Splitter.PayeeData[] memory newPayees = new Splitter.PayeeData[](2);
+        newPayees[0] = Splitter.PayeeData({payee: PAYEE2, shares: 3000}); // 30%
+        newPayees[1] = Splitter.PayeeData({payee: PAYEE3, shares: 7000}); // 70%
 
         bytes memory newPackedData = _createPackedPayeesData(newPayees);
         bytes32 newHash = _calculatePayeesHash(newPayees);
@@ -284,9 +284,9 @@ contract TokenSplitterTest is TestHelper {
     }
 
     function testCalculatePayeesHashView() public view {
-        TokenSplitter.PayeeData[] memory payees = new TokenSplitter.PayeeData[](2);
-        payees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
-        payees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000});
+        Splitter.PayeeData[] memory payees = new Splitter.PayeeData[](2);
+        payees[0] = Splitter.PayeeData({payee: PAYEE1, shares: 6000});
+        payees[1] = Splitter.PayeeData({payee: PAYEE2, shares: 4000});
 
         bytes32 calculatedHash = _calculatePayeesHash(payees);
         assertEq(calculatedHash, expectedHash);
@@ -294,13 +294,13 @@ contract TokenSplitterTest is TestHelper {
 
     function testAddressSorting() public pure {
         // Test that different input orders produce the same hash
-        TokenSplitter.PayeeData[] memory payees1 = new TokenSplitter.PayeeData[](2);
-        payees1[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
-        payees1[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000});
+        Splitter.PayeeData[] memory payees1 = new Splitter.PayeeData[](2);
+        payees1[0] = Splitter.PayeeData({payee: PAYEE1, shares: 6000});
+        payees1[1] = Splitter.PayeeData({payee: PAYEE2, shares: 4000});
 
-        TokenSplitter.PayeeData[] memory payees2 = new TokenSplitter.PayeeData[](2);
-        payees2[0] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000}); // Swapped order
-        payees2[1] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
+        Splitter.PayeeData[] memory payees2 = new Splitter.PayeeData[](2);
+        payees2[0] = Splitter.PayeeData({payee: PAYEE2, shares: 4000}); // Swapped order
+        payees2[1] = Splitter.PayeeData({payee: PAYEE1, shares: 6000});
 
         bytes32 hash1 = _calculatePayeesHash(payees1);
         bytes32 hash2 = _calculatePayeesHash(payees2);
@@ -372,6 +372,6 @@ contract TokenSplitterTest is TestHelper {
 
     function expectEmitPayeesUpdated(bytes32 newHash) internal {
         vm.expectEmit(true, false, false, false);
-        emit TokenSplitter.PayeesUpdated(newHash);
+        emit Splitter.PayeesUpdated(newHash);
     }
 }

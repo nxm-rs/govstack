@@ -4,7 +4,7 @@ pragma solidity ^0.8;
 import "forge-std/Test.sol";
 import "../src/Token.sol";
 import "../src/Governor.sol";
-import "../src/TokenSplitter.sol";
+import "../src/Splitter.sol";
 import "../src/Deployer.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
@@ -36,8 +36,11 @@ contract TestERC20 is ERC20 {
 /// @notice Interface for MockTarget contract
 interface IMockTarget {
     function setValue(uint256 _value) external;
+
     function reset() external;
+
     function value() external view returns (uint256);
+
     function executed() external view returns (bool);
 }
 
@@ -190,14 +193,14 @@ contract TestHelper is Test {
         assertTrue(governorAddress != address(0), "Governor address should not be zero");
 
         Token token = Token(tokenAddress);
-        TokenGovernor governor = TokenGovernor(payable(governorAddress));
+        Governor governor = Governor(payable(governorAddress));
 
         assertEq(token.name(), expectedTokenName);
         assertEq(governor.name(), expectedGovernorName);
         assertEq(token.owner(), OWNER);
 
         if (splitterAddress != address(0)) {
-            TokenSplitter splitter = TokenSplitter(splitterAddress);
+            Splitter splitter = Splitter(splitterAddress);
             // In the new implementation, splitter is configured with payees during deployment
             assertTrue(splitter.payeesHash() != bytes32(0));
         }
@@ -254,7 +257,7 @@ contract TestHelper is Test {
         uint256 expectedAbstain
     ) internal view {
         (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes) =
-            TokenGovernor(payable(governorAddress)).proposalVotes(proposalId);
+            Governor(payable(governorAddress)).proposalVotes(proposalId);
         assertEq(againstVotes, expectedAgainst, "Against votes mismatch");
         assertEq(forVotes, expectedFor, "For votes mismatch");
         assertEq(abstainVotes, expectedAbstain, "Abstain votes mismatch");
@@ -262,7 +265,7 @@ contract TestHelper is Test {
 
     // Helper to assert proposal state
     function assertProposalState(address governorAddress, uint256 proposalId, uint8 expectedState) internal view {
-        uint8 actualState = uint8(TokenGovernor(payable(governorAddress)).state(proposalId));
+        uint8 actualState = uint8(Governor(payable(governorAddress)).state(proposalId));
         assertEq(actualState, expectedState, "Proposal state mismatch");
     }
 
@@ -406,10 +409,10 @@ contract TestHelper is Test {
     event ProposalExecuted(uint256 proposalId);
 
     // Helper to setup common test scenario
-    function setupBasicSplitter() internal returns (TokenSplitter, TestERC20) {
+    function setupBasicSplitter() internal returns (Splitter, TestERC20) {
         TestERC20 token = deployMockToken();
 
-        TokenSplitter splitter = new TokenSplitter(OWNER);
+        Splitter splitter = new Splitter(OWNER);
 
         return (splitter, token);
     }
@@ -611,7 +614,7 @@ contract TestHelper is Test {
 
         // Verify the provided calldata matches stored hash
         bytes32 providedHash = keccak256(packedPayeesData);
-        require(providedHash == TokenSplitter(splitterAddress).payeesHash(), InvalidPayeesHash());
+        require(providedHash == Splitter(splitterAddress).payeesHash(), InvalidPayeesHash());
 
         uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
 
@@ -640,7 +643,7 @@ contract TestHelper is Test {
     }
 
     function _hasPayees(address splitterAddress) internal view returns (bool) {
-        return TokenSplitter(splitterAddress).payeesHash() != bytes32(0);
+        return Splitter(splitterAddress).payeesHash() != bytes32(0);
     }
 
     /**
@@ -649,7 +652,7 @@ contract TestHelper is Test {
      * @param payees Array of PayeeData structs containing address and shares
      * @return packedData The tightly packed bytes for use with other functions
      */
-    function _createPackedPayeesData(TokenSplitter.PayeeData[] memory payees)
+    function _createPackedPayeesData(Splitter.PayeeData[] memory payees)
         internal
         pure
         returns (bytes memory packedData)
@@ -657,7 +660,7 @@ contract TestHelper is Test {
         require(payees.length != 0, InvalidShares());
 
         // Create a memory array to sort by address
-        TokenSplitter.PayeeData[] memory sortedPayees = new TokenSplitter.PayeeData[](payees.length);
+        Splitter.PayeeData[] memory sortedPayees = new Splitter.PayeeData[](payees.length);
         for (uint256 i = 0; i < payees.length;) {
             sortedPayees[i] = payees[i];
             unchecked {
@@ -670,7 +673,7 @@ contract TestHelper is Test {
         for (uint256 i = 0; i < sortedPayees.length - 1;) {
             for (uint256 j = 0; j < sortedPayees.length - i - 1;) {
                 if (sortedPayees[j].payee > sortedPayees[j + 1].payee) {
-                    TokenSplitter.PayeeData memory temp = sortedPayees[j];
+                    Splitter.PayeeData memory temp = sortedPayees[j];
                     sortedPayees[j] = sortedPayees[j + 1];
                     sortedPayees[j + 1] = temp;
                 }
@@ -707,7 +710,7 @@ contract TestHelper is Test {
 
         // Verify the provided calldata matches stored hash
         bytes32 providedHash = keccak256(packedPayeesData);
-        require(providedHash == TokenSplitter(splitterAddress).payeesHash(), InvalidPayeesHash());
+        require(providedHash == Splitter(splitterAddress).payeesHash(), InvalidPayeesHash());
 
         uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
         payeeAmounts = new uint256[](payeeCount);
@@ -731,7 +734,7 @@ contract TestHelper is Test {
         }
     }
 
-    function _calculatePayeesHash(TokenSplitter.PayeeData[] memory payees) internal pure returns (bytes32 hash) {
+    function _calculatePayeesHash(Splitter.PayeeData[] memory payees) internal pure returns (bytes32 hash) {
         bytes memory packedData = _createPackedPayeesData(payees);
         hash = keccak256(packedData);
     }

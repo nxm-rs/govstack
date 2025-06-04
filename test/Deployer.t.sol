@@ -42,13 +42,13 @@ contract DeployerTest is TestHelper {
 
         assertValidDeployment(tokenAddress, governorAddress, splitterAddress, TOKEN_NAME, GOVERNOR_NAME);
 
-        TokenSplitter splitter = TokenSplitter(splitterAddress);
+        Splitter splitter = Splitter(splitterAddress);
         assertTrue(_hasPayees(splitterAddress)); // Payees are now configured during deployment
 
         // Verify that the splitter is properly configured
-        TokenSplitter.PayeeData[] memory payees = new TokenSplitter.PayeeData[](2);
-        payees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
-        payees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000});
+        Splitter.PayeeData[] memory payees = new Splitter.PayeeData[](2);
+        payees[0] = Splitter.PayeeData({payee: PAYEE1, shares: 6000});
+        payees[1] = Splitter.PayeeData({payee: PAYEE2, shares: 4000});
 
         bytes memory packedPayeesData = _createPackedPayeesData(payees);
 
@@ -146,7 +146,7 @@ contract DeployerTest is TestHelper {
 
         // Deployer should succeed, but validation will fail in TokenSplitter.updatePayees()
         vm.recordLogs();
-        vm.expectRevert(TokenSplitter.InvalidTotalShares.selector);
+        vm.expectRevert(Splitter.InvalidTotalShares.selector);
         new TestableDeployer(
             createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions, OWNER
         );
@@ -156,7 +156,7 @@ contract DeployerTest is TestHelper {
 
         invalidSplitterConfig = AbstractDeployer.SplitterConfig({packedPayeesData: zeroAddressPackedData});
 
-        vm.expectRevert(TokenSplitter.InvalidShares.selector);
+        vm.expectRevert(Splitter.InvalidShares.selector);
         new TestableDeployer(
             createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions, OWNER
         );

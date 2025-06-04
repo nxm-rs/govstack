@@ -3,7 +3,7 @@ pragma solidity ^0.8;
 
 import "./Token.sol";
 import "./Governor.sol";
-import "./TokenSplitter.sol";
+import "./Splitter.sol";
 
 /// @title AbstractDeployer
 /// @author Nexum Contributors
@@ -15,10 +15,6 @@ import "./TokenSplitter.sol";
 /// The deployer automatically self-destructs after successful deployment, leaving only the
 /// deployed contracts.
 abstract contract AbstractDeployer {
-    /*´:°•.°+.*•´.*:˚.°*.˚•´.*°.°•.°•.*•´.*:˚.°*.˚•´.*°.°•.°+.*•´.*:*/
-    /*                       CUSTOM ERRORS                        */
-    /*.•°:°.´+˚.*°.˚:*.`•*.+°.•°:´*.`•*.•°.•°:°.´:•˚°.*°.˚:*.`•+°.•°*/
-
     error FinalOwnerZeroAddress();
     error TokenNameEmpty();
     error TokenSymbolEmpty();
@@ -109,7 +105,7 @@ abstract contract AbstractDeployer {
 
         // Deploy Governor contract
         addresses.governor = address(
-            new TokenGovernor{salt: salt}(
+            new Governor{salt: salt}(
                 governorConfig.name,
                 addresses.token,
                 governorConfig.votingDelay,
@@ -122,11 +118,11 @@ abstract contract AbstractDeployer {
 
         // Deploy TokenSplitter contract if payees data is provided
         if (splitterConfig.packedPayeesData.length > 0) {
-            addresses.splitter = address(new TokenSplitter{salt: salt}(address(this)));
+            addresses.splitter = address(new Splitter{salt: salt}(address(this)));
             emit SplitterDeployed(addresses.splitter, addresses.governor);
 
             // Configure the splitter with pre-generated packed calldata
-            TokenSplitter splitter = TokenSplitter(addresses.splitter);
+            Splitter splitter = Splitter(addresses.splitter);
             splitter.updatePayees(splitterConfig.packedPayeesData);
 
             // Transfer ownership to the governor
@@ -241,7 +237,7 @@ contract TestableDeployer is AbstractDeployer {
         // Predict Governor address
         bytes32 governorBytecodeHash = keccak256(
             abi.encodePacked(
-                type(TokenGovernor).creationCode,
+                type(Governor).creationCode,
                 abi.encode(
                     governorConfig.name,
                     addresses.token,
@@ -257,7 +253,7 @@ contract TestableDeployer is AbstractDeployer {
         // Predict Splitter address if payees data is provided
         if (splitterConfig.packedPayeesData.length > 0) {
             bytes32 splitterBytecodeHash =
-                keccak256(abi.encodePacked(type(TokenSplitter).creationCode, abi.encode(deployer)));
+                keccak256(abi.encodePacked(type(Splitter).creationCode, abi.encode(deployer)));
             addresses.splitter = address(
                 uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, splitterBytecodeHash))))
             );

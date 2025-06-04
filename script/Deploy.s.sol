@@ -7,7 +7,7 @@ import "forge-std/Vm.sol";
 import "../src/Deployer.sol";
 import "../src/Token.sol";
 import "../src/Governor.sol";
-import "../src/TokenSplitter.sol";
+import "../src/Splitter.sol";
 
 /**
  * @title Deploy
@@ -546,14 +546,14 @@ contract Deploy is Script {
         require(bytes(token.symbol()).length > 0, "Token symbol should not be empty");
 
         // Verify governor exists and has basic properties
-        TokenGovernor governor = TokenGovernor(payable(governorAddress));
+        Governor governor = Governor(payable(governorAddress));
         require(bytes(governor.name()).length > 0, "Governor name should not be empty");
         require(governor.votingDelay() > 0, "Governor voting delay should be greater than 0");
         require(governor.votingPeriod() > 0, "Governor voting period should be greater than 0");
 
         // Verify splitter if deployed
         if (splitterAddress != address(0)) {
-            TokenSplitter splitter = TokenSplitter(splitterAddress);
+            Splitter splitter = Splitter(splitterAddress);
             require(splitter.payeesHash() != bytes32(0), "Splitter should have payees");
         }
 

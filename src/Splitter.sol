@@ -39,7 +39,7 @@ function calculatePayment(
 /// The owner grants token approvals to this contract, and anyone can call splitToken
 /// to distribute tokens from the owner to the configured payees.
 /// Maximizes calldata usage and minimizes storage for optimal gas efficiency.
-contract TokenSplitter is ReentrancyGuard, Ownable {
+contract Splitter is ReentrancyGuard, Ownable {
     using SafeTransferLib for address;
 
     /// @notice Struct for payee data

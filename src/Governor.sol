@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8;
 
-import "@openzeppelin/contracts/governance/Governor.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
-import "@openzeppelin/contracts/governance/extensions/GovernorPreventLateQuorum.sol";
+import {Governor as OZGovernor} from "@openzeppelin/contracts/governance/Governor.sol";
+import {GovernorCountingSimple} from "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
+import {GovernorVotes} from "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
+import {GovernorVotesQuorumFraction} from
+    "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import {GovernorSettings} from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
+import {GovernorPreventLateQuorum} from "@openzeppelin/contracts/governance/extensions/GovernorPreventLateQuorum.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
 /// @title TokenGovernor
 /// @author Nexum Contributors
-contract TokenGovernor is
-    Governor,
+contract Governor is
+    OZGovernor,
     GovernorSettings,
     GovernorCountingSimple,
     GovernorVotes,
@@ -27,7 +28,7 @@ contract TokenGovernor is
         uint256 quorumPercentage,
         uint48 lateQuorumExtension
     )
-        Governor(name)
+        OZGovernor(name)
         GovernorVotes(IVotes(token))
         GovernorVotesQuorumFraction(quorumPercentage)
         GovernorSettings(uint48(initialVotingDelay), uint32(initialVotingPeriod), 1)
@@ -35,12 +36,12 @@ contract TokenGovernor is
     {}
 
     /// @dev Override to resolve conflict between Governor and GovernorSettings
-    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
+    function proposalThreshold() public view override(OZGovernor, GovernorSettings) returns (uint256) {
         return GovernorSettings.proposalThreshold();
     }
 
     /// @dev Override to resolve conflict between Governor and GovernorPreventLateQuorum
-    function _tallyUpdated(uint256 proposalId) internal override(Governor, GovernorPreventLateQuorum) {
+    function _tallyUpdated(uint256 proposalId) internal override(OZGovernor, GovernorPreventLateQuorum) {
         GovernorPreventLateQuorum._tallyUpdated(proposalId);
     }
 
@@ -48,7 +49,7 @@ contract TokenGovernor is
     function proposalDeadline(uint256 proposalId)
         public
         view
-        override(Governor, GovernorPreventLateQuorum)
+        override(OZGovernor, GovernorPreventLateQuorum)
         returns (uint256)
     {
         return GovernorPreventLateQuorum.proposalDeadline(proposalId);
