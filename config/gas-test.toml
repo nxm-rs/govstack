@@ -13,8 +13,7 @@ voting_period = 5760
 quorum_numerator = 4
 late_quorum_extension = 10
 
-[owner]
-address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+
 
 [deployment]
 scenario = "basic"

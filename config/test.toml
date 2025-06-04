@@ -15,9 +15,7 @@ voting_period_time = "2 hours"         # Short voting period for testing
 late_quorum_extension_time = "10 minutes"  # Short extension for testing
 quorum_numerator = 100   # 1% quorum for testing
 
-[treasury]
-# Treasury address for testing (has minting/burning privileges)
-address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+
 
 [distributions.test]
 description = "Simple test distribution"
@@ -36,8 +34,6 @@ description = "Test recipient 2"
 
 [splitter.test]
 description = "Simple 50/50 test split"
-
-
 
 [[splitter.test.payees]]
 account = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"

@@ -20,10 +20,7 @@ late_quorum_extension_time = "1 hour"
 # e.g., 5 = 5% quorum
 quorum_numerator = 5
 
-[treasury]
-# Treasury address that receives ownership of the token contract after distribution
-# This address will have minting and burning privileges and should be a secure multisig
-address = "0x1234567890123456789012345678901234567890"
+
 
 # Distribution configurations for different scenarios
 # The interactive deployment will show these scenarios with descriptions

@@ -48,17 +48,17 @@ prompt_rpc_url() {
     echo "  Sepolia: https://sepolia.infura.io/v3/YOUR_PROJECT_ID"
     echo "  Local:   http://localhost:8545"
     echo
-    
+
     while true; do
         read -p "Enter RPC URL: " rpc_url
-        
+
         if [[ -z "$rpc_url" ]]; then
             print_error "RPC URL cannot be empty. Please enter a valid URL."
             continue
         fi
-        
+
         if [[ "$rpc_url" =~ ^https?:// ]]; then
-            export ETH_RPC_URL="$rpc_url"
+            export RPC_URL="$rpc_url"
             print_success "RPC URL set: $rpc_url"
             break
         else
@@ -74,9 +74,9 @@ prompt_etherscan_key() {
     print_info "Etherscan API key is required for contract verification."
     print_info "Get your free API key from: https://etherscan.io/apis"
     echo
-    
+
     read -p "Enter Etherscan API key (or press Enter to skip verification): " etherscan_key
-    
+
     if [[ -n "$etherscan_key" ]]; then
         export ETHERSCAN_API_KEY="$etherscan_key"
         print_success "Etherscan API key configured for contract verification."
@@ -91,27 +91,38 @@ prompt_etherscan_key() {
 # Function to run interactive deployment
 run_deployment() {
     print_header "Starting Interactive Deployment"
-    
+
     print_warning "SECURITY REMINDERS:"
     print_warning "• Use a dedicated deployment wallet with minimal funds"
     print_warning "• Never use your main wallet's private key for production"
     print_warning "• Test on Sepolia testnet before mainnet deployment"
     print_warning "• Double-check all configuration before deployment"
     echo
-    
+
     print_info "The deployment script will now:"
     print_info "• Discover and list available configuration files"
     print_info "• Parse scenarios dynamically from your selected config"
     print_info "• Show scenario descriptions from TOML files"
     print_info "• Prompt for private key (entered securely)"
     echo
-    
+
     read -p "Press Enter to continue with deployment..."
     echo
-    
+
     # Run the interactive deployment
-    forge script script/Deploy.s.sol:Deploy \
-        --sig "runInteractiveWithScenario()"
+    local forge_args=(
+        "script/Deploy.s.sol:Deploy"
+        "--sig" "runInteractiveWithScenario()"
+        "--rpc-url" "$RPC_URL"
+        "--broadcast"
+    )
+    
+    # Add verification if Etherscan API key is provided
+    if [[ -n "$ETHERSCAN_API_KEY" ]]; then
+        forge_args+=("--verify" "--etherscan-api-key" "$ETHERSCAN_API_KEY")
+    fi
+    
+    forge script "${forge_args[@]}"
 }
 
 # Main function
@@ -119,13 +130,13 @@ main() {
     print_header "Governance Stack Deployment"
     print_info "This script will guide you through a secure deployment process."
     echo
-    
+
     # Check if we're in the right directory
     if [[ ! -f "script/Deploy.s.sol" ]]; then
         print_error "Deploy.s.sol not found. Please run this script from the governance directory."
         exit 1
     fi
-    
+
     # Build contracts first
     print_info "Building contracts..."
     if forge build; then
@@ -135,14 +146,14 @@ main() {
         exit 1
     fi
     echo
-    
+
     # Prompt for environment setup
     prompt_rpc_url
     prompt_etherscan_key
-    
+
     # Run deployment
     run_deployment
-    
+
     # Check result
     if [[ $? -eq 0 ]]; then
         print_success "Deployment completed!"
