@@ -70,3 +70,11 @@ interface IBridgedToken {
     function approve(address _spender, uint256 _value) external returns (bool);
     function allowance(address _owner, address _spender) external view returns (uint256);
 }
+
+interface IAMBBridge {
+    /// @notice Foreign chain message sender.
+    function messageSender() external view returns (address);
+
+    /// @notice Message's originating chain id.
+    function messageSourceChainId() external view returns (uint256);
+}

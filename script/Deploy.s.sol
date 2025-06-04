@@ -155,7 +155,6 @@ contract Deploy is Script {
         // Load basic configurations
         tokenConfig.name = vm.parseTomlString(toml, ".token.name");
         tokenConfig.symbol = vm.parseTomlString(toml, ".token.symbol");
-        tokenConfig.initialSupply = vm.parseTomlUint(toml, ".token.initial_supply");
 
         // Load time-based governor config
         TimeBasedGovernorConfig memory timeBasedConfig;
@@ -430,7 +429,6 @@ contract Deploy is Script {
         console.log("=== Deployment Configuration ===");
         console.log("Token Name:", tokenConfig.name);
         console.log("Token Symbol:", tokenConfig.symbol);
-        console.log("Token Initial Supply:", tokenConfig.initialSupply);
         console.log("Governor Name:", governorConfig.name);
         console.log("Voting Delay:", governorConfig.votingDelay);
         console.log("Voting Period:", governorConfig.votingPeriod);
@@ -556,7 +554,7 @@ contract Deploy is Script {
         // Verify splitter if deployed
         if (splitterAddress != address(0)) {
             TokenSplitter splitter = TokenSplitter(splitterAddress);
-            require(splitter.hasPayees(), "Splitter should have payees");
+            require(splitter.payeesHash() != bytes32(0), "Splitter should have payees");
         }
 
         console.log("Contract verification successful");

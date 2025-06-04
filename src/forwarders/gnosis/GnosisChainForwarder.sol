@@ -3,7 +3,7 @@ pragma solidity ^0.8;
 
 import "../../Forwarder.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {IOmnibridge, IxDaiBridge, IBridgedToken} from "./interfaces/IGnosisBridges.sol";
+import {IOmnibridge, IxDaiBridge, IBridgedToken, IAMBBridge} from "./interfaces/IGnosisBridges.sol";
 
 /// @title GnosisChainForwarder
 /// @notice Concrete implementation of Forwarder for Gnosis Chain using Omnibridge/AMB
@@ -19,11 +19,19 @@ contract GnosisChainForwarder is Forwarder {
     /// @dev This is used for native token bridging (xDAI)
     IxDaiBridge public constant XDAI_BRIDGE = IxDaiBridge(0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6);
 
+    /// @notice The AMB bridge contract on Gnosis Chain
+    IAMBBridge public constant AMB_BRIDGE = IAMBBridge(0x75Df5AF045d91108662D8080fD1FEFAd6aA0bb59);
+
     /// @notice Gnosis Chain ID
     uint256 public constant GNOSIS_CHAIN_ID = 100;
 
+    /// @notice Mainnet Chain ID
+    uint256 public constant MAINNET_CHAIN_ID = 1;
+
     /// @notice Error thrown when token is not a valid bridged token
     error InvalidToken();
+    /// @notice Unauthorized sender
+    error UnauthorizedSender();
 
     /// @notice Initialize the Gnosis Chain forwarder
     /// @param _mainnetRecipient The address on mainnet that will receive forwarded tokens
@@ -127,5 +135,32 @@ contract GnosisChainForwarder is Forwarder {
                 token.safeTransfer(to, balance);
             }
         }
+    }
+
+    /// @notice Allow arbitrary calls to be made by authorized senders.
+    function arbitraryCall(address sender, uint256 value, bytes calldata callData)
+        external
+        onlyInitialized
+        onlyMainnetRecipient
+    {
+        (bool success, bytes memory returnData) = sender.call{value: value}(callData);
+        if (!success) {
+            // bubble up the revert
+            assembly ("memory-safe") {
+                revert(add(returnData, 0x20), mload(returnData))
+            }
+        }
+    }
+
+    modifier onlyMainnetRecipient() {
+        require(
+            msg.sender == mainnetRecipient
+                || (
+                    msg.sender == address(AMB_BRIDGE) && AMB_BRIDGE.messageSender() == mainnetRecipient
+                        && AMB_BRIDGE.messageSourceChainId() == MAINNET_CHAIN_ID
+                ),
+            UnauthorizedSender()
+        );
+        _;
     }
 }

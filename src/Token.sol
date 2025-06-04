@@ -45,14 +45,6 @@ contract Token is ERC20Votes, Ownable {
     }
 
     /**
-     * @dev Burn tokens from the caller's balance. Only the owner can call this function.
-     * @param amount The amount of tokens to burn
-     */
-    function burn(uint256 amount) external onlyOwner {
-        _burn(msg.sender, amount);
-    }
-
-    /**
      * @dev Required as ERC20Votes from solady differs to IVotes from OpenZeppelin
      */
     function getPastTotalSupply(uint256 timepoint) public view returns (uint256) {

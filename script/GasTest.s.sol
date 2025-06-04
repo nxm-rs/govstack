@@ -51,7 +51,7 @@ contract GasTest is Script {
 
         // Create token configuration
         AbstractDeployer.TokenConfig memory tokenConfig =
-            AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL, initialSupply: 0});
+            AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL});
 
         // Create governor configuration
         AbstractDeployer.GovernorConfig memory governorConfig = AbstractDeployer.GovernorConfig({
@@ -112,7 +112,7 @@ contract GasTest is Script {
 
         // Create token configuration
         AbstractDeployer.TokenConfig memory tokenConfig =
-            AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL, initialSupply: 0});
+            AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL});
 
         // Create governor configuration
         AbstractDeployer.GovernorConfig memory governorConfig = AbstractDeployer.GovernorConfig({
@@ -254,7 +254,7 @@ contract GasTest is Script {
         require(keccak256(bytes(governor.name())) == keccak256(bytes(GOVERNOR_NAME)), "Governor name mismatch");
 
         // Verify splitter properties
-        require(splitter.hasPayees(), "Splitter payees should be set");
+        require(splitter.payeesHash() != bytes32(0), "Splitter payees should be set");
 
         // Verify distributions
         require(token.balanceOf(RECIPIENT_1) == RECIPIENT_1_AMOUNT, "Recipient 1 balance mismatch");
@@ -273,7 +273,7 @@ contract GasTest is Script {
 
         // Create token configuration
         AbstractDeployer.TokenConfig memory tokenConfig =
-            AbstractDeployer.TokenConfig({name: "Large Scale Gas Test", symbol: "LSGT", initialSupply: 0});
+            AbstractDeployer.TokenConfig({name: "Large Scale Gas Test", symbol: "LSGT"});
 
         // Create governor configuration
         AbstractDeployer.GovernorConfig memory governorConfig = AbstractDeployer.GovernorConfig({

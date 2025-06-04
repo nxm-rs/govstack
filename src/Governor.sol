@@ -22,13 +22,13 @@ contract TokenGovernor is
         address token,
         uint256 initialVotingDelay,
         uint256 initialVotingPeriod,
-        uint256 quorumNumerator,
+        uint256 quorumPercentage,
         uint48 lateQuorumExtension
     )
         Governor(name)
         GovernorVotes(IVotes(token))
-        GovernorVotesQuorumFraction(quorumNumerator)
-        GovernorSettings(uint48(initialVotingDelay), uint32(initialVotingPeriod), 0)
+        GovernorVotesQuorumFraction(quorumPercentage)
+        GovernorSettings(uint48(initialVotingDelay), uint32(initialVotingPeriod), 1)
         GovernorPreventLateQuorum(lateQuorumExtension)
     {}
 

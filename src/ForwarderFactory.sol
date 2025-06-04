@@ -61,7 +61,7 @@ abstract contract ForwarderFactory {
     /// @param mainnetRecipient The mainnet address
     /// @return True if the forwarder exists (has code deployed)
     function forwarderExists(address mainnetRecipient) external view returns (bool) {
-        address predicted = this.predictForwarderAddress(mainnetRecipient);
+        address predicted = predictForwarderAddress(mainnetRecipient);
         return predicted.code.length > 0;
     }
 
@@ -69,7 +69,7 @@ abstract contract ForwarderFactory {
     /// @param mainnetRecipient The mainnet address that will receive tokens
     /// @return forwarder The address of the forwarder contract
     function getOrDeployForwarder(address mainnetRecipient) external returns (address payable forwarder) {
-        forwarder = payable(this.predictForwarderAddress(mainnetRecipient));
+        forwarder = payable(predictForwarderAddress(mainnetRecipient));
 
         // Check if forwarder already exists by checking if it has code
         if (forwarder.code.length == 0) {

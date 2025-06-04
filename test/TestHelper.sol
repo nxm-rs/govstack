@@ -111,7 +111,7 @@ contract TestHelper is Test {
     }
 
     function createBasicTokenConfig() internal pure returns (AbstractDeployer.TokenConfig memory) {
-        return AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL, initialSupply: 0});
+        return AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: TOKEN_SYMBOL});
     }
 
     function createBasicGovernorConfig() internal pure returns (AbstractDeployer.GovernorConfig memory) {
@@ -199,7 +199,7 @@ contract TestHelper is Test {
         if (splitterAddress != address(0)) {
             TokenSplitter splitter = TokenSplitter(splitterAddress);
             // In the new implementation, splitter is configured with payees during deployment
-            assertTrue(splitter.hasPayees());
+            assertTrue(splitter.payeesHash() != bytes32(0));
         }
     }
 
@@ -322,7 +322,7 @@ contract TestHelper is Test {
         internal
         view
     {
-        (bool isPayee, uint16 shares) = TokenSplitter(splitterAddress).getPayeeInfo(payee, packedData);
+        (bool isPayee, uint16 shares) = _getPayeeInfo(splitterAddress, payee, packedData);
         assertTrue(isPayee, "Address should be a payee");
         assertEq(uint256(shares), expectedShares, "Shares mismatch");
     }
@@ -589,5 +589,150 @@ contract TestHelper is Test {
             lateQuorumExtensionTime,
             lateQuorumExtensionBlocks
         );
+    }
+
+    error InvalidPayeesHash();
+    error InvalidShares();
+    error EmptyCalldata();
+
+    /**
+     * @dev Check if an address is a current payee by scanning calldata
+     * @param account Address to check
+     * @param packedPayeesData Calldata containing payees and shares for verification
+     * @return isPayee Whether the address is a payee
+     * @return accountShares The shares for this address (0 if not a payee)
+     */
+    function _getPayeeInfo(address splitterAddress, address account, bytes memory packedPayeesData)
+        internal
+        view
+        returns (bool isPayee, uint16 accountShares)
+    {
+        if (packedPayeesData.length == 0) return (false, 0);
+
+        // Verify the provided calldata matches stored hash
+        bytes32 providedHash = keccak256(packedPayeesData);
+        require(providedHash == TokenSplitter(splitterAddress).payeesHash(), InvalidPayeesHash());
+
+        uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
+
+        // Scan through payees to find the account
+        for (uint256 i = 0; i < payeeCount;) {
+            uint256 offset = i * PAYEE_DATA_SIZE;
+
+            address payee;
+            assembly {
+                payee := shr(96, mload(add(add(packedPayeesData, 0x20), add(offset, 2))))
+            }
+
+            if (payee == account) {
+                assembly {
+                    accountShares := shr(240, mload(add(add(packedPayeesData, 0x20), offset)))
+                }
+                return (true, accountShares);
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        return (false, 0);
+    }
+
+    function _hasPayees(address splitterAddress) internal view returns (bool) {
+        return TokenSplitter(splitterAddress).payeesHash() != bytes32(0);
+    }
+
+    /**
+     * @dev Internal function to create packed calldata from PayeeData array
+     * Payees are automatically sorted by address to ensure deterministic results
+     * @param payees Array of PayeeData structs containing address and shares
+     * @return packedData The tightly packed bytes for use with other functions
+     */
+    function _createPackedPayeesData(TokenSplitter.PayeeData[] memory payees)
+        internal
+        pure
+        returns (bytes memory packedData)
+    {
+        require(payees.length != 0, InvalidShares());
+
+        // Create a memory array to sort by address
+        TokenSplitter.PayeeData[] memory sortedPayees = new TokenSplitter.PayeeData[](payees.length);
+        for (uint256 i = 0; i < payees.length;) {
+            sortedPayees[i] = payees[i];
+            unchecked {
+                ++i;
+            }
+        }
+
+        // Sort by address using bubble sort (simple but gas-inefficient for large arrays)
+        // Do not use on-chain sorting for large arrays due to gas inefficiency
+        for (uint256 i = 0; i < sortedPayees.length - 1;) {
+            for (uint256 j = 0; j < sortedPayees.length - i - 1;) {
+                if (sortedPayees[j].payee > sortedPayees[j + 1].payee) {
+                    TokenSplitter.PayeeData memory temp = sortedPayees[j];
+                    sortedPayees[j] = sortedPayees[j + 1];
+                    sortedPayees[j + 1] = temp;
+                }
+                unchecked {
+                    ++j;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        // Use abi.encodePacked for simple and correct packing
+        for (uint256 i = 0; i < sortedPayees.length;) {
+            packedData = abi.encodePacked(packedData, sortedPayees[i].shares, sortedPayees[i].payee);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @dev Calculate how much each payee would receive from a given amount
+     * @param amount The total amount to be split
+     * @param packedPayeesData Calldata containing payees and shares
+     * @return payeeAmounts Array of amounts each payee would receive
+     */
+    function _calculateSplit(address splitterAddress, uint256 amount, bytes memory packedPayeesData)
+        internal
+        view
+        returns (uint256[] memory payeeAmounts)
+    {
+        require(packedPayeesData.length != 0, EmptyCalldata());
+
+        // Verify the provided calldata matches stored hash
+        bytes32 providedHash = keccak256(packedPayeesData);
+        require(providedHash == TokenSplitter(splitterAddress).payeesHash(), InvalidPayeesHash());
+
+        uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
+        payeeAmounts = new uint256[](payeeCount);
+        uint256 totalDistributed = 0;
+
+        for (uint256 i = 0; i < payeeCount;) {
+            uint256 offset = i * PAYEE_DATA_SIZE;
+
+            uint16 payeeShares;
+            assembly {
+                payeeShares := shr(240, mload(add(add(packedPayeesData, 0x20), offset)))
+            }
+
+            uint256 payment = calculatePayment(amount, payeeShares, i, payeeCount, totalDistributed);
+            payeeAmounts[i] = payment;
+            totalDistributed += payment;
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _calculatePayeesHash(TokenSplitter.PayeeData[] memory payees) internal pure returns (bytes32 hash) {
+        bytes memory packedData = _createPackedPayeesData(payees);
+        hash = keccak256(packedData);
     }
 }
