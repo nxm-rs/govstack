@@ -969,7 +969,7 @@ contract Deploy is Script {
         for (uint256 i = 0; i <= content.length - headerBytes.length; i++) {
             if (_bytesMatchInternal(content, i, headerBytes)) {
                 // Look for description = "..." in the section
-                string memory descPattern = "description = \"";
+                string memory descPattern = 'description = "';
                 bytes memory descPatternBytes = bytes(descPattern);
 
                 for (uint256 k = i + headerBytes.length; k <= content.length - descPatternBytes.length; k++) {
@@ -1311,8 +1311,8 @@ contract Deploy is Script {
         address deployerAddress = vm.parseJsonAddress(json, ".transactions[0].contractAddress");
 
         // Find the DeploymentCompleted event in the logs
-        // Event signature: DeploymentCompleted(address,address,address,address,uint256,bytes32)
-        bytes32 deploymentCompletedTopic = 0x492087711a91a3084770255e71f4d91cb2c694c66db15a894544614762706b20;
+        // Event signature: DeploymentCompleted(address,address,address,uint256,bytes32)
+        bytes32 deploymentCompletedTopic = 0xce08c4f36a3e05be0b12c72def3cd74dead69ac5b8219fcbd4c04d515fdb7dda;
 
         // Iterate through logs in the first receipt to find the deployment event
         uint256 logIndex = 0;
@@ -1358,14 +1358,14 @@ contract Deploy is Script {
                                 )
                             );
 
-                            // Extract data (finalOwner, totalDistributed, salt)
+                            // Extract data (totalDistributed, salt)
                             bytes memory logData = vm.parseJsonBytes(
                                 json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].data")
                             );
 
                             // Decode the non-indexed parameters from data
-                            // Data contains: finalOwner (32 bytes), totalDistributed (32 bytes), salt (32 bytes)
-                            (, totalDistributed, salt) = abi.decode(logData, (address, uint256, bytes32));
+                            // Data contains: totalDistributed (32 bytes), salt (32 bytes)
+                            (totalDistributed, salt) = abi.decode(logData, (uint256, bytes32));
 
                             return (tokenAddress, governorAddress, splitterAddress, totalDistributed, salt);
                         }

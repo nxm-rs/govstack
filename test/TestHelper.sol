@@ -299,12 +299,11 @@ contract TestHelper is Test {
         returns (address token, address governor, address splitter, uint256 totalDistributed, bytes32 salt)
     {
         for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == keccak256("DeploymentCompleted(address,address,address,address,uint256,bytes32)"))
-            {
+            if (logs[i].topics[0] == keccak256("DeploymentCompleted(address,address,address,uint256,bytes32)")) {
                 token = address(uint160(uint256(logs[i].topics[1])));
                 governor = address(uint160(uint256(logs[i].topics[2])));
                 splitter = address(uint160(uint256(logs[i].topics[3])));
-                (, uint256 distributed, bytes32 deploymentSalt) = abi.decode(logs[i].data, (address, uint256, bytes32));
+                (uint256 distributed, bytes32 deploymentSalt) = abi.decode(logs[i].data, (uint256, bytes32));
                 totalDistributed = distributed;
                 salt = deploymentSalt;
                 break;

@@ -60,7 +60,6 @@ abstract contract AbstractDeployer {
         address indexed token,
         address indexed governor,
         address indexed splitter,
-        address finalOwner,
         uint256 totalDistributed,
         bytes32 salt
     );
@@ -142,9 +141,7 @@ abstract contract AbstractDeployer {
         // Transfer token ownership to the governor
         token.transferOwnership(addresses.governor);
 
-        emit DeploymentCompleted(
-            addresses.token, addresses.governor, addresses.splitter, addresses.governor, totalDistributed, salt
-        );
+        emit DeploymentCompleted(addresses.token, addresses.governor, addresses.splitter, totalDistributed, salt);
 
         // Emit self-destruct event
         emit DeployerSelfDestructed(addresses);
