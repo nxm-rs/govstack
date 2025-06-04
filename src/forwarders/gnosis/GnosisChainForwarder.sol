@@ -25,6 +25,9 @@ contract GnosisChainForwarder is Forwarder {
     /// @notice Gnosis Chain ID
     uint256 public constant GNOSIS_CHAIN_ID = 100;
 
+    /// @notice Mainnet Chain ID
+    uint256 public constant MAINNET_CHAIN_ID = 1;
+
     /// @notice Error thrown when token is not a valid bridged token
     error InvalidToken();
     /// @notice Unauthorized sender
@@ -135,23 +138,29 @@ contract GnosisChainForwarder is Forwarder {
     }
 
     /// @notice Allow arbitrary calls to be made by authorized senders.
-    function arbitraryCall(address sender, uint256 value, bytes calldata callData) external onlyInitialized {
-        if (
+    function arbitraryCall(address sender, uint256 value, bytes calldata callData)
+        external
+        onlyInitialized
+        onlyMainnetRecipient
+    {
+        (bool success, bytes memory returnData) = sender.call{value: value}(callData);
+        if (!success) {
+            // bubble up the revert
+            assembly ("memory-safe") {
+                revert(add(returnData, 0x20), mload(returnData))
+            }
+        }
+    }
+
+    modifier onlyMainnetRecipient() {
+        require(
             msg.sender == mainnetRecipient
                 || (
                     msg.sender == address(AMB_BRIDGE) && AMB_BRIDGE.messageSender() == mainnetRecipient
-                        && AMB_BRIDGE.messageSourceChainId() == 1
-                )
-        ) {
-            (bool success, bytes memory returnData) = sender.call{value: value}(callData);
-            if (!success) {
-                // bubble up the revert
-                assembly ("memory-safe") {
-                    revert(add(returnData, 0x20), mload(returnData))
-                }
-            }
-        } else {
-            revert UnauthorizedSender();
-        }
+                        && AMB_BRIDGE.messageSourceChainId() == MAINNET_CHAIN_ID
+                ),
+            UnauthorizedSender()
+        );
+        _;
     }
 }
