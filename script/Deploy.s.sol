@@ -52,6 +52,9 @@ contract Deploy is Script {
         uint256 quorumNumerator;
     }
 
+    // Token decimals constant (standard ERC20 uses 18 decimals)
+    uint256 private constant TOKEN_DECIMALS = 18;
+
     // Events for deployment tracking
     event ConfigurationLoaded(string configPath, string scenario, string splitterScenario);
     event TimeParametersConverted(
@@ -1100,7 +1103,7 @@ contract Deploy is Script {
         for (uint256 i = 0; i < recipients.length; i++) {
             distributions[i] = AbstractDeployer.TokenDistribution({
                 recipient: recipients[i].addr,
-                amount: vm.parseUint(recipients[i].amount)
+                amount: _convertTokensToWei(vm.parseUint(recipients[i].amount))
             });
         }
 
@@ -1199,7 +1202,7 @@ contract Deploy is Script {
         for (uint256 i = 0; i < recipients.length; i++) {
             distributions[i] = AbstractDeployer.TokenDistribution({
                 recipient: recipients[i].addr,
-                amount: vm.parseUint(recipients[i].amount)
+                amount: _convertTokensToWei(vm.parseUint(recipients[i].amount))
             });
         }
 
@@ -1299,41 +1302,71 @@ contract Deploy is Script {
     {
         // Read the latest broadcast file
         string memory broadcastPath = string.concat(
-            "broadcast/Deploy.s.sol/",
-            vm.toString(block.chainid),
-            "/runInteractiveWithScenario-latest.json"
+            "broadcast/Deploy.s.sol/", vm.toString(block.chainid), "/runInteractiveWithScenario-latest.json"
         );
-        
+
         string memory json = vm.readFile(broadcastPath);
-        
+
         // Get the Deployer contract address from the first transaction
         address deployerAddress = vm.parseJsonAddress(json, ".transactions[0].contractAddress");
-        
+
         // Find the DeploymentCompleted event in the logs
         // Event signature: DeploymentCompleted(address,address,address,address,uint256,bytes32)
         bytes32 deploymentCompletedTopic = 0x492087711a91a3084770255e71f4d91cb2c694c66db15a894544614762706b20;
-        
+
         // Iterate through logs in the first receipt to find the deployment event
         uint256 logIndex = 0;
         while (true) {
-            try vm.parseJsonAddress(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].address")) returns (address logAddress) {
+            try vm.parseJsonAddress(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].address"))
+            returns (address logAddress) {
                 // Check if this log is from the deployer contract
                 if (logAddress == deployerAddress) {
                     // Check if this is the DeploymentCompleted event
-                    try vm.parseJsonBytes32(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[0]")) returns (bytes32 topic0) {
+                    try vm.parseJsonBytes32(
+                        json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[0]")
+                    ) returns (bytes32 topic0) {
                         if (topic0 == deploymentCompletedTopic) {
                             // Extract addresses from indexed topics
-                            tokenAddress = address(uint160(uint256(vm.parseJsonBytes32(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[1]")))));
-                            governorAddress = address(uint160(uint256(vm.parseJsonBytes32(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[2]")))));
-                            splitterAddress = address(uint160(uint256(vm.parseJsonBytes32(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[3]")))));
-                            
+                            tokenAddress = address(
+                                uint160(
+                                    uint256(
+                                        vm.parseJsonBytes32(
+                                            json,
+                                            string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[1]")
+                                        )
+                                    )
+                                )
+                            );
+                            governorAddress = address(
+                                uint160(
+                                    uint256(
+                                        vm.parseJsonBytes32(
+                                            json,
+                                            string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[2]")
+                                        )
+                                    )
+                                )
+                            );
+                            splitterAddress = address(
+                                uint160(
+                                    uint256(
+                                        vm.parseJsonBytes32(
+                                            json,
+                                            string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[3]")
+                                        )
+                                    )
+                                )
+                            );
+
                             // Extract data (finalOwner, totalDistributed, salt)
-                            bytes memory logData = vm.parseJsonBytes(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].data"));
-                            
+                            bytes memory logData = vm.parseJsonBytes(
+                                json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].data")
+                            );
+
                             // Decode the non-indexed parameters from data
                             // Data contains: finalOwner (32 bytes), totalDistributed (32 bytes), salt (32 bytes)
-                            (,totalDistributed, salt) = abi.decode(logData, (address, uint256, bytes32));
-                            
+                            (, totalDistributed, salt) = abi.decode(logData, (address, uint256, bytes32));
+
                             return (tokenAddress, governorAddress, splitterAddress, totalDistributed, salt);
                         }
                     } catch {
@@ -1346,7 +1379,7 @@ contract Deploy is Script {
                 break;
             }
         }
-        
+
         revert("DeploymentCompleted event not found in broadcast logs");
     }
 
@@ -1418,7 +1451,7 @@ contract Deploy is Script {
         return (
             recipients[index].name,
             recipients[index].addr,
-            vm.parseUint(recipients[index].amount),
+            _convertTokensToWei(vm.parseUint(recipients[index].amount)),
             recipients[index].description
         );
     }
@@ -1428,7 +1461,7 @@ contract Deploy is Script {
      */
     function _loadDistributionScenarioView(string memory toml, string memory scenario)
         internal
-        view
+        pure
         returns (RecipientInfo[] memory recipients)
     {
         string memory scenarioPath = string.concat(".distributions.", scenario, ".recipients");
@@ -1441,6 +1474,15 @@ contract Deploy is Script {
     /**
      * @dev Preview deployment without executing
      */
+    /**
+     * @dev Convert token amounts (in token units) to wei (multiply by 10^18)
+     * @param tokenAmount Amount in token units (e.g., 1000 for 1000 tokens)
+     * @return Amount in wei (e.g., 1000000000000000000000 for 1000 tokens)
+     */
+    function _convertTokensToWei(uint256 tokenAmount) internal pure returns (uint256) {
+        return tokenAmount * (10 ** TOKEN_DECIMALS);
+    }
+
     function previewDeployment(string memory configPath)
         external
         returns (
@@ -1468,7 +1510,7 @@ contract Deploy is Script {
         payeeCount = splitterInfo.payees.length;
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            totalDistribution += vm.parseUint(recipients[i].amount);
+            totalDistribution += _convertTokensToWei(vm.parseUint(recipients[i].amount));
         }
     }
 }

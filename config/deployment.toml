@@ -20,8 +20,6 @@ late_quorum_extension_time = "1 hour"
 # e.g., 5 = 5% quorum
 quorum_numerator = 5
 
-
-
 # Distribution configurations for different scenarios
 # The interactive deployment will show these scenarios with descriptions
 # Add new scenarios here and they'll automatically appear as options
@@ -33,25 +31,25 @@ description = "Standard governance token distribution"
 [[distributions.default.recipients]]
 name = "DAO Treasury"
 address = "0x1111111111111111111111111111111111111111"
-amount = "4000000000000000000000000"  # 4M tokens (40%)
+amount = "4000000"  # 4M tokens (40%)
 description = "Main DAO treasury for governance"
 
 [[distributions.default.recipients]]
 name = "Core Contributors"
 address = "0x2222222222222222222222222222222222222222"
-amount = "2500000000000000000000000"  # 2.5M tokens (25%)
+amount = "2500000"  # 2.5M tokens (25%)
 description = "Core team and early contributors"
 
 [[distributions.default.recipients]]
 name = "Ecosystem Fund"
 address = "0x3333333333333333333333333333333333333333"
-amount = "2000000000000000000000000"  # 2M tokens (20%)
+amount = "2000000"  # 2M tokens (20%)
 description = "Ecosystem development and partnerships"
 
 [[distributions.default.recipients]]
 name = "Community Rewards"
 address = "0x4444444444444444444444444444444444444444"
-amount = "1500000000000000000000000"  # 1.5M tokens (15%)
+amount = "1500000"  # 1.5M tokens (15%)
 description = "Community incentives and rewards"
 
 [distributions.startup]
@@ -61,25 +59,25 @@ description = "Early stage startup token distribution"
 [[distributions.startup.recipients]]
 name = "Founders"
 address = "0x5555555555555555555555555555555555555555"
-amount = "3000000000000000000000000"  # 3M tokens (30%)
+amount = "3000000"  # 3M tokens (30%)
 description = "Founder allocation with vesting"
 
 [[distributions.startup.recipients]]
 name = "Team"
 address = "0x6666666666666666666666666666666666666666"
-amount = "2000000000000000000000000"  # 2M tokens (20%)
+amount = "2000000"  # 2M tokens (20%)
 description = "Employee stock option pool"
 
 [[distributions.startup.recipients]]
 name = "Investors"
 address = "0x7777777777777777777777777777777777777777"
-amount = "2500000000000000000000000"  # 2.5M tokens (25%)
+amount = "2500000"  # 2.5M tokens (25%)
 description = "Seed and Series A investors"
 
 [[distributions.startup.recipients]]
 name = "Public Sale"
 address = "0x8888888888888888888888888888888888888888"
-amount = "2500000000000000000000000"  # 2.5M tokens (25%)
+amount = "2500000"  # 2.5M tokens (25%)
 description = "Public token sale allocation"
 
 [distributions.dao]
@@ -89,25 +87,25 @@ description = "Decentralized autonomous organization distribution"
 [[distributions.dao.recipients]]
 name = "DAO Treasury"
 address = "0xDadaDadadadadadaDaDadAdaDADAdadAdADaDADA"
-amount = "5000000000000000000000000"  # 5M tokens (50%)
+amount = "5000000"  # 5M tokens (50%)
 description = "Main DAO treasury for governance decisions"
 
 [[distributions.dao.recipients]]
 name = "Liquidity Mining"
 address = "0xC0C0c0c0C0C0c0c0c0C0c0C0C0C0C0C0C0C0c0c0"
-amount = "2000000000000000000000000"  # 2M tokens (20%)
+amount = "2000000"  # 2M tokens (20%)
 description = "Liquidity provider rewards"
 
 [[distributions.dao.recipients]]
 name = "Developer Grants"
 address = "0xEceCecECEcecEceceCECEcEcECeCeCeCeCECECEc"
-amount = "1500000000000000000000000"  # 1.5M tokens (15%)
+amount = "1500000"  # 1.5M tokens (15%)
 description = "Developer and builder grants"
 
 [[distributions.dao.recipients]]
 name = "Community Fund"
 address = "0xeaeAEAeaEaeAEaEAeaeaeaeAeAeAeAEaeAEAeAeA"
-amount = "1500000000000000000000000"  # 1.5M tokens (15%)
+amount = "1500000"  # 1.5M tokens (15%)
 description = "Community initiatives and events"
 
 [distributions.test]
@@ -117,19 +115,19 @@ description = "Simple test distribution for development"
 [[distributions.test.recipients]]
 name = "Test Account 1"
 address = "0x1111111111111111111111111111111111111111"
-amount = "1000000000000000000000"  # 1000 tokens
+amount = "1000"  # 1000 tokens
 description = "Test recipient 1"
 
 [[distributions.test.recipients]]
 name = "Test Account 2"
 address = "0x2222222222222222222222222222222222222222"
-amount = "2000000000000000000000"  # 2000 tokens
+amount = "2000"  # 2000 tokens
 description = "Test recipient 2"
 
 [[distributions.test.recipients]]
 name = "Test Account 3"
 address = "0x3333333333333333333333333333333333333333"
-amount = "3000000000000000000000"  # 3000 tokens
+amount = "3000"  # 3000 tokens
 description = "Test recipient 3"
 
 # Revenue splitter configurations for automated distribution

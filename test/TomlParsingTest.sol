@@ -22,9 +22,7 @@ contract TomlParsingTest is Test, Deploy {
         // Verify the first recipient details
         assertEq(recipients[0].name, "DAO Treasury", "First recipient name should be DAO Treasury");
         assertEq(recipients[0].addr, 0x1111111111111111111111111111111111111111, "First recipient address should match");
-        assertEq(
-            vm.parseUint(recipients[0].amount), 4000000000000000000000000, "First recipient amount should be 4M tokens"
-        );
+        assertEq(vm.parseUint(recipients[0].amount), 4000000, "First recipient amount should be 4M tokens");
         assertEq(
             recipients[0].description, "Main DAO treasury for governance", "First recipient description should match"
         );
@@ -34,11 +32,7 @@ contract TomlParsingTest is Test, Deploy {
         assertEq(
             recipients[1].addr, 0x2222222222222222222222222222222222222222, "Second recipient address should match"
         );
-        assertEq(
-            vm.parseUint(recipients[1].amount),
-            2500000000000000000000000,
-            "Second recipient amount should be 2.5M tokens"
-        );
+        assertEq(vm.parseUint(recipients[1].amount), 2500000, "Second recipient amount should be 2.5M tokens");
         assertEq(
             recipients[1].description, "Core team and early contributors", "Second recipient description should match"
         );
@@ -91,11 +85,7 @@ contract TomlParsingTest is Test, Deploy {
         assertEq(
             recipients[0].addr, 0x1111111111111111111111111111111111111111, "First test recipient address should match"
         );
-        assertEq(
-            vm.parseUint(recipients[0].amount),
-            1000000000000000000000,
-            "First test recipient amount should be 1000 tokens"
-        );
+        assertEq(vm.parseUint(recipients[0].amount), 1000, "First test recipient amount should be 1000 tokens");
         assertEq(recipients[0].description, "Test recipient 1", "First test recipient description should match");
 
         // Verify the last recipient details
@@ -103,11 +93,7 @@ contract TomlParsingTest is Test, Deploy {
         assertEq(
             recipients[2].addr, 0x3333333333333333333333333333333333333333, "Third test recipient address should match"
         );
-        assertEq(
-            vm.parseUint(recipients[2].amount),
-            3000000000000000000000,
-            "Third test recipient amount should be 3000 tokens"
-        );
+        assertEq(vm.parseUint(recipients[2].amount), 3000, "Third test recipient amount should be 3000 tokens");
         assertEq(recipients[2].description, "Test recipient 3", "Third test recipient description should match");
     }
 
