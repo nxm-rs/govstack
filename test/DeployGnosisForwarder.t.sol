@@ -38,10 +38,10 @@ contract DeployGnosisForwarderTest is Test {
         address testRecipient = address(0x1234567890123456789012345678901234567890);
 
         // Predict the forwarder address
-        address predictedAddress = factory.predictForwarderAddress(testRecipient);
+        address predictedAddress = factory.predictForwarderAddress(testRecipient, bytes32(0));
 
         // Deploy the forwarder
-        address deployedAddress = factory.deployForwarder(testRecipient);
+        address deployedAddress = factory.deployForwarder(testRecipient, bytes32(0));
 
         // Verify the addresses match
         assertEq(predictedAddress, deployedAddress);
@@ -64,8 +64,8 @@ contract DeployGnosisForwarderTest is Test {
             address recipient = recipients[i];
 
             // Predict and deploy
-            address predicted = factory.predictForwarderAddress(recipient);
-            address deployed = factory.deployForwarder(recipient);
+            address predicted = factory.predictForwarderAddress(recipient, bytes32(0));
+            address deployed = factory.deployForwarder(recipient, bytes32(0));
 
             assertEq(predicted, deployed);
 
@@ -95,15 +95,15 @@ contract DeployGnosisForwarderTest is Test {
         // Test that predictions are consistent within the same factory instance
         address testRecipient = vm.addr(99);
 
-        address predicted1 = factory.predictForwarderAddress(testRecipient);
-        address predicted2 = factory.predictForwarderAddress(testRecipient);
+        address predicted1 = factory.predictForwarderAddress(testRecipient, bytes32(0));
+        address predicted2 = factory.predictForwarderAddress(testRecipient, bytes32(0));
 
         // Predictions should be the same for the same recipient and factory
         assertEq(predicted1, predicted2, "Same factory predictions should match");
 
         // Now test that different factories have different implementations
         GnosisForwarderFactory factory2 = new GnosisForwarderFactory();
-        address predicted3 = factory2.predictForwarderAddress(testRecipient);
+        address predicted3 = factory2.predictForwarderAddress(testRecipient, bytes32(0));
 
         // Different factories will have different implementations, so different predictions
         assertTrue(predicted1 != predicted3, "Different factories should have different predictions");
@@ -134,10 +134,10 @@ contract DeployGnosisForwarderTest is Test {
         address recipient = vm.addr(50);
 
         // Deploy first forwarder
-        address forwarder1 = factory.deployForwarder(recipient);
+        address forwarder1 = factory.deployForwarder(recipient, bytes32(0));
 
         // Use getOrDeployForwarder for second attempt - this handles duplicates gracefully
-        address forwarder2 = factory.getOrDeployForwarder(recipient);
+        address forwarder2 = factory.getOrDeployForwarder(recipient, bytes32(0));
 
         assertEq(forwarder1, forwarder2);
     }
@@ -154,7 +154,7 @@ contract DeployGnosisForwarderTest is Test {
         address recipient = vm.addr(60);
 
         // Deploy via factory
-        address forwarderAddr = factory.deployForwarder(recipient);
+        address forwarderAddr = factory.deployForwarder(recipient, bytes32(0));
         GnosisForwarder forwarder = GnosisForwarder(payable(forwarderAddr));
 
         // Should be initialized
@@ -168,7 +168,7 @@ contract DeployGnosisForwarderTest is Test {
 
     function testBridgeConfigurationInDeployment() public {
         // Deploy forwarder and check bridge configuration
-        address forwarderAddr = factory.deployForwarder(mainnetRecipient);
+        address forwarderAddr = factory.deployForwarder(mainnetRecipient, bytes32(0));
         GnosisForwarder forwarder = GnosisForwarder(payable(forwarderAddr));
 
         assertTrue(address(forwarder.OMNIBRIDGE()) != address(0) && address(forwarder.XDAI_BRIDGE()) != address(0));

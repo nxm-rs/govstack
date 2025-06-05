@@ -68,11 +68,11 @@ contract DeployGnosisForwarder is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Predict the forwarder address using the standard method
-        address predictedAddress = factory.predictForwarderAddress(mainnetRecipient);
+        address predictedAddress = factory.predictForwarderAddress(mainnetRecipient, bytes32(0));
         console.log("Predicted forwarder address:", predictedAddress);
 
         // Deploy the forwarder using the standard method
-        address forwarderAddress = factory.deployForwarder(mainnetRecipient);
+        address forwarderAddress = factory.deployForwarder(mainnetRecipient, bytes32(0));
         console.log("Deployed forwarder address:", forwarderAddress);
 
         // Verify the addresses match
@@ -113,14 +113,14 @@ contract DeployGnosisForwarder is Script {
             console.log("Deploying forwarder for recipient:", recipient);
 
             // Check if already deployed
-            address predictedAddress = factory.predictForwarderAddress(recipient);
+            address predictedAddress = factory.predictForwarderAddress(recipient, bytes32(0));
             if (predictedAddress.code.length > 0) {
                 console.log("Forwarder already exists for recipient:", recipient);
                 continue;
             }
 
             // Deploy the forwarder
-            address forwarderAddress = factory.deployForwarder(recipient);
+            address forwarderAddress = factory.deployForwarder(recipient, bytes32(0));
             console.log("Deployed forwarder at:", forwarderAddress);
         }
 
@@ -163,7 +163,7 @@ contract DeployGnosisForwarder is Script {
         console.log("[OK] Implementation verified");
 
         // Test prediction function works
-        address testPrediction = factory.predictForwarderAddress(address(0x1));
+        address testPrediction = factory.predictForwarderAddress(address(0x1), bytes32(0));
         require(testPrediction != address(0), "Factory prediction failed");
         console.log("[OK] Factory verified");
 
