@@ -3,6 +3,9 @@ pragma solidity ^0.8;
 
 import "@openzeppelin/contracts/governance/Governor.sol";
 
+/// @title OtocoManager
+/// @author Nexum Contributors
+/// @notice Abstract contract implementing ABI for use with https://otoco.io.
 abstract contract OtocoManager is Governor {
     address private _manager;
 

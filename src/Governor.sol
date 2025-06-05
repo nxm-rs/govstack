@@ -14,6 +14,13 @@ import {OtocoManager} from "./extensions/OtocoManager.sol";
 
 /// @title TokenGovernor
 /// @author Nexum Contributors
+/// @notice A standard OpenZeppelin-based governance contract with sane defaults and extensions:
+/// - Simple counting mechanism
+/// - Token-based voting
+/// - Quorum fraction-based quorum calculation
+/// - Settings for voting delay, period, and proposal threshold
+/// - Prevent late quorum extension mechanism
+/// - OtocoManager extension for managing token-based proposals and voting
 contract Governor is
     OZGovernor,
     GovernorSettings,

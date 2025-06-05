@@ -5,6 +5,7 @@ import "../../ForwarderFactory.sol";
 import "./GnosisForwarder.sol";
 
 /// @title GnosisForwarderFactory
+/// @author Nexum Contributors
 /// @notice Factory contract for deploying GnosisForwarder contracts
 /// @dev Inherits from ForwarderFactory and deploys GnosisForwarder implementation
 contract GnosisForwarderFactory is ForwarderFactory {
