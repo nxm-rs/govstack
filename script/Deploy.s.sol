@@ -69,13 +69,6 @@ contract Deploy is Script {
     event DistributionScenarioSelected(string scenario, uint256 recipientCount);
     event SplitterScenarioSelected(string scenario, uint256 payeeCount, uint256 tokenCount);
     event ContractsPredicted(address token, address governor, address splitter);
-    event DeploymentCompleted(
-        address indexed token,
-        address indexed governor,
-        address indexed splitter,
-        uint256 totalDistributed,
-        bytes32 salt
-    );
 
     /**
      * @dev Main entry point for deployment script
@@ -109,6 +102,8 @@ contract Deploy is Script {
 
         runInteractiveWithScenario(configPath, distributionScenario, splitterScenario);
     }
+
+
 
     /**
      * @dev Interactive deployment with specific distribution and splitter scenarios
@@ -319,6 +314,8 @@ contract Deploy is Script {
             networkKey = "mainnet";
         } else if (currentChainId == 11155111) {
             networkKey = "sepolia";
+        } else if (currentChainId == 84532) {
+            networkKey = "base_sepolia";
         } else {
             networkKey = "mainnet"; // Default fallback
         }
@@ -1160,6 +1157,9 @@ contract Deploy is Script {
         return _bytesMatchInternal(content, startPos, pattern);
     }
 
+    /**
+     * @dev Deploy contracts with non-interactive configuration
+     */
     function _deployWithConfiguration(
         AbstractDeployer.TokenConfig memory tokenConfig,
         AbstractDeployer.GovernorConfig memory governorConfig,
@@ -1215,48 +1215,10 @@ contract Deploy is Script {
         new Deployer(tokenConfig, governorConfig, splitterConfig, distributions);
 
         vm.stopBroadcast();
-
-        // Extract deployment addresses from broadcast file
-        (address tokenAddress, address governorAddress, address splitterAddress, uint256 totalDistributed, bytes32 salt)
-        = _getDeploymentDetailsFromBroadcast();
-
-        emit ContractsPredicted(tokenAddress, governorAddress, splitterAddress);
-
-        // Save deployment artifacts
-        _saveDeploymentArtifacts(tokenAddress, governorAddress, splitterAddress, salt);
-
-        emit DeploymentCompleted(tokenAddress, governorAddress, splitterAddress, totalDistributed, salt);
-
-        string memory finalSummary = string.concat(
-            "=== Deployment Successful ===\n",
-            "Token Address: ",
-            vm.toString(tokenAddress),
-            "\n",
-            "Governor Address: ",
-            vm.toString(governorAddress),
-            "\n"
-        );
-
-        if (splitterAddress != address(0)) {
-            finalSummary = string.concat(finalSummary, "Splitter Address: ", vm.toString(splitterAddress), "\n");
-        }
-
-        finalSummary = string.concat(
-            finalSummary,
-            "Total Distributed: ",
-            vm.toString(totalDistributed),
-            "\n",
-            "Deployment Salt: ",
-            vm.toString(salt),
-            "\n",
-            "=============================\n\nDeployment completed successfully!"
-        );
-
-        vm.prompt(finalSummary);
     }
 
     /**
-     * @dev Deploy contracts with interactive configuration (prompted private key)
+     * @dev Deploy contracts with interactive configuration
      */
     function _deployWithInteractiveConfiguration(
         AbstractDeployer.TokenConfig memory tokenConfig,
@@ -1312,188 +1274,9 @@ contract Deploy is Script {
         new Deployer(tokenConfig, governorConfig, splitterConfig, distributions);
 
         vm.stopBroadcast();
-
-        // Extract deployment addresses from broadcast file
-        (address tokenAddress, address governorAddress, address splitterAddress, uint256 totalDistributed, bytes32 salt)
-        = _getDeploymentDetailsFromBroadcast();
-
-        emit ContractsPredicted(tokenAddress, governorAddress, splitterAddress);
-
-        // Save deployment artifacts
-        _saveDeploymentArtifacts(tokenAddress, governorAddress, splitterAddress, salt);
-
-        emit DeploymentCompleted(tokenAddress, governorAddress, splitterAddress, totalDistributed, salt);
-
-        string memory finalSummary = string.concat(
-            "=== Interactive Deployment Successful ===\n",
-            "Token Address: ",
-            vm.toString(tokenAddress),
-            "\n",
-            "Governor Address: ",
-            vm.toString(governorAddress),
-            "\n"
-        );
-
-        if (splitterAddress != address(0)) {
-            finalSummary = string.concat(finalSummary, "Splitter Address: ", vm.toString(splitterAddress), "\n");
-        }
-
-        finalSummary = string.concat(
-            finalSummary,
-            "Total Distributed: ",
-            vm.toString(totalDistributed),
-            "\n",
-            "Deployment Salt: ",
-            vm.toString(salt),
-            "\n"
-        );
-
-        finalSummary = string.concat(
-            finalSummary, "==========================================\n\nDeployment completed successfully!"
-        );
-
-        vm.prompt(finalSummary);
     }
 
-    /**
-     * @dev Extract deployment details from broadcast JSON file
-     */
-    function _getDeploymentDetailsFromBroadcast()
-        internal
-        view
-        returns (
-            address tokenAddress,
-            address governorAddress,
-            address splitterAddress,
-            uint256 totalDistributed,
-            bytes32 salt
-        )
-    {
-        // Read the latest broadcast file
-        string memory broadcastPath = string.concat(
-            "broadcast/Deploy.s.sol/", vm.toString(block.chainid), "/runInteractiveWithScenario-latest.json"
-        );
 
-        string memory json = vm.readFile(broadcastPath);
-
-        // Get the Deployer contract address from the first transaction
-        address deployerAddress = vm.parseJsonAddress(json, ".transactions[0].contractAddress");
-
-        // Find the DeploymentCompleted event in the logs
-        // Event signature: DeploymentCompleted(address,address,address,uint256,bytes32)
-        bytes32 deploymentCompletedTopic = 0xce08c4f36a3e05be0b12c72def3cd74dead69ac5b8219fcbd4c04d515fdb7dda;
-
-        // Iterate through logs in the first receipt to find the deployment event
-        uint256 logIndex = 0;
-        while (true) {
-            try vm.parseJsonAddress(json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].address"))
-            returns (address logAddress) {
-                // Check if this log is from the deployer contract
-                if (logAddress == deployerAddress) {
-                    // Check if this is the DeploymentCompleted event
-                    try vm.parseJsonBytes32(
-                        json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[0]")
-                    ) returns (bytes32 topic0) {
-                        if (topic0 == deploymentCompletedTopic) {
-                            // Extract addresses from indexed topics
-                            tokenAddress = address(
-                                uint160(
-                                    uint256(
-                                        vm.parseJsonBytes32(
-                                            json,
-                                            string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[1]")
-                                        )
-                                    )
-                                )
-                            );
-                            governorAddress = address(
-                                uint160(
-                                    uint256(
-                                        vm.parseJsonBytes32(
-                                            json,
-                                            string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[2]")
-                                        )
-                                    )
-                                )
-                            );
-                            splitterAddress = address(
-                                uint160(
-                                    uint256(
-                                        vm.parseJsonBytes32(
-                                            json,
-                                            string.concat(".receipts[0].logs[", vm.toString(logIndex), "].topics[3]")
-                                        )
-                                    )
-                                )
-                            );
-
-                            // Extract data (totalDistributed, salt)
-                            bytes memory logData = vm.parseJsonBytes(
-                                json, string.concat(".receipts[0].logs[", vm.toString(logIndex), "].data")
-                            );
-
-                            // Decode the non-indexed parameters from data
-                            // Data contains: totalDistributed (32 bytes), salt (32 bytes)
-                            (totalDistributed, salt) = abi.decode(logData, (uint256, bytes32));
-
-                            return (tokenAddress, governorAddress, splitterAddress, totalDistributed, salt);
-                        }
-                    } catch {
-                        // Skip this log and continue
-                    }
-                }
-                logIndex++;
-            } catch {
-                // No more logs, break the loop
-                break;
-            }
-        }
-
-        revert("DeploymentCompleted event not found in broadcast logs");
-    }
-
-    /**
-     * @dev Save deployment artifacts
-     */
-    function _saveDeploymentArtifacts(
-        address tokenAddress,
-        address governorAddress,
-        address splitterAddress,
-        bytes32 salt
-    ) internal {
-        string memory chainId = vm.toString(block.chainid);
-        string memory timestamp = vm.toString(block.timestamp);
-
-        string memory artifacts = string.concat(
-            "{\n",
-            '  "chainId": ',
-            chainId,
-            ",\n",
-            '  "timestamp": ',
-            timestamp,
-            ",\n",
-            '  "salt": "',
-            vm.toString(salt),
-            '",\n',
-            '  "token": "',
-            vm.toString(tokenAddress),
-            '",\n',
-            '  "governor": "',
-            vm.toString(governorAddress),
-            '"'
-        );
-
-        if (splitterAddress != address(0)) {
-            artifacts = string.concat(artifacts, ',\n  "splitter": "', vm.toString(splitterAddress), '"');
-        }
-
-        artifacts = string.concat(artifacts, "\n}");
-
-        string memory filename = string.concat("deployments/deployment-", chainId, "-", timestamp, ".json");
-        vm.writeFile(filename, artifacts);
-
-        // Deployment artifacts saved - no need for additional prompt
-    }
 
     /**
      * @dev Get recipient count for a scenario

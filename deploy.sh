@@ -68,24 +68,102 @@ prompt_rpc_url() {
     echo
 }
 
-# Function to prompt for Etherscan API key
-prompt_etherscan_key() {
-    print_header "Etherscan Configuration"
-    print_info "Etherscan API key is required for contract verification."
-    print_info "Get your free API key from: https://etherscan.io/apis"
+
+
+# Function to show verification commands for a specific contract
+show_contract_verification() {
+    local contract_name="$1"
+    local contract_address="$2"
+    
+    print_info "To verify the $contract_name contract on Sourcify:"
+    echo "  forge verify-contract --rpc-url $RPC_URL $contract_address"
+    echo
+    print_info "To verify the $contract_name contract on Etherscan:"
+    echo "  forge verify-contract --rpc-url $RPC_URL --etherscan-api-key <YOUR_API_KEY> $contract_address"
+    echo
+}
+
+# Function to provide manual verification guidance
+show_verification_guidance() {
+    print_header "Contract Verification"
+    print_info "To verify your deployed contracts, you can use the following commands:"
     echo
 
-    read -p "Enter Etherscan API key (or press Enter to skip verification): " etherscan_key
-
-    if [[ -n "$etherscan_key" ]]; then
-        export ETHERSCAN_API_KEY="$etherscan_key"
-        print_success "Etherscan API key configured for contract verification."
-    else
-        print_warning "No Etherscan API key provided. Contract verification will be skipped."
-        print_info "You can manually verify contracts later using:"
-        print_info "forge verify-contract <address> <contract> --etherscan-api-key <key>"
+    # Check if jq is available
+    if ! command -v jq &> /dev/null; then
+        print_warning "jq is not installed. Contract addresses will need to be extracted manually from deployment output."
+        print_info "Install jq to automatically extract addresses: apt-get install jq (or brew install jq on macOS)"
+        echo
     fi
+
+    # Find the most recent broadcast file
+    local broadcast_dir="broadcast/Deploy.s.sol"
+    local chain_id=$(cast chain-id --rpc-url "$RPC_URL" 2>/dev/null || echo "unknown")
+    local broadcast_file
+    
+    if [[ -f "$broadcast_dir/$chain_id/runInteractiveWithScenario-latest.json" ]]; then
+        broadcast_file="$broadcast_dir/$chain_id/runInteractiveWithScenario-latest.json"
+    else
+        # Look for any recent broadcast file as fallback
+        broadcast_file=$(find "$broadcast_dir" -name "*latest.json" -type f 2>/dev/null | head -1)
+    fi
+
+    if [[ -f "$broadcast_file" ]] && command -v jq &> /dev/null; then
+        print_info "Extracting contract addresses from broadcast file..."
+        
+        # Extract contract addresses from transaction logs using event topic hashes
+        local token_address=$(jq -r '.receipts[0]?.logs[]? | select(.topics[0] == "0xcbceb2a71186186f122db5bab7bde42a9ae01fdb01216247c5532f66cea8aaef") | .topics[1] // empty' "$broadcast_file" 2>/dev/null | head -1)
+        local governor_address=$(jq -r '.receipts[0]?.logs[]? | select(.topics[0] == "0x48dde23f2c9b4f804a9531f4c202bad0ecc19810335bbe6c775acb078ab76aae") | .topics[1] // empty' "$broadcast_file" 2>/dev/null | head -1)
+        local splitter_address=$(jq -r '.receipts[0]?.logs[]? | select(.topics[0] == "0x25becba37ef6dc7e3abf7e664e271f097329426ac54fb5c5987ebc84452b650e") | .topics[1] // empty' "$broadcast_file" 2>/dev/null | head -1)
+
+        # Convert from padded hex to address format
+        if [[ -n "$token_address" && "$token_address" != "null" ]]; then
+            token_address="0x${token_address:26}"
+            print_success "Token contract: $token_address"
+        fi
+        
+        if [[ -n "$governor_address" && "$governor_address" != "null" ]]; then
+            governor_address="0x${governor_address:26}"
+            print_success "Governor contract: $governor_address"
+        fi
+        
+        if [[ -n "$splitter_address" && "$splitter_address" != "null" ]]; then
+            splitter_address="0x${splitter_address:26}"
+            print_success "Splitter contract: $splitter_address"
+        fi
+        echo
+
+        # Provide specific verification commands if addresses were found
+        if [[ -n "$token_address" ]]; then
+            show_contract_verification "Token" "$token_address"
+        fi
+
+        if [[ -n "$governor_address" ]]; then
+            show_contract_verification "Governor" "$governor_address"
+        fi
+
+        if [[ -n "$splitter_address" ]]; then
+            show_contract_verification "Splitter" "$splitter_address"
+        fi
+    else
+        print_warning "Could not automatically extract contract addresses."
+        print_info "Check the deployment output above for contract addresses, then use:"
+        echo
+    fi
+
+    print_info "General verification commands:"
+    print_info "• For Sourcify (free, no API key needed):"
+    echo "  forge verify-contract --rpc-url $RPC_URL <CONTRACT_ADDRESS>"
     echo
+    print_info "• For Etherscan (requires API key from https://etherscan.io/apis):"
+    echo "  forge verify-contract --rpc-url $RPC_URL --etherscan-api-key <API_KEY> <CONTRACT_ADDRESS>"
+    echo
+    print_info "Example with real addresses from your deployment:"
+    echo "  forge verify-contract --rpc-url $RPC_URL 0xa22e305c656d3a927d1d3b81a75521e3ca59f3f5"
+    echo "  forge verify-contract --rpc-url $RPC_URL --etherscan-api-key <API_KEY> 0xa22e305c656d3a927d1d3b81a75521e3ca59f3f5"
+    echo
+    print_info "Note: The Deployer contract self-destructs and cannot be verified."
+    print_info "Only verify the Token, Governor, and Splitter contracts."
 }
 
 # Function to run interactive deployment
@@ -109,7 +187,7 @@ run_deployment() {
     read -p "Press Enter to continue with deployment..."
     echo
 
-    # Run the interactive deployment
+    # Run the interactive deployment (first phase)
     local forge_args=(
         "script/Deploy.s.sol:Deploy"
         "--sig" "runInteractiveWithScenario()"
@@ -117,12 +195,20 @@ run_deployment() {
         "--broadcast"
     )
     
-    # Add verification if Etherscan API key is provided
-    if [[ -n "$ETHERSCAN_API_KEY" ]]; then
-        forge_args+=("--verify" "--etherscan-api-key" "$ETHERSCAN_API_KEY")
+    print_info "Running deployment phase..."
+    if forge script "${forge_args[@]}"; then
+        print_success "Deployment phase completed successfully."
+    else
+        print_error "Deployment phase failed."
+        return 1
     fi
     
-    forge script "${forge_args[@]}"
+    # Wait a moment for broadcast file to be fully written
+    print_info "Waiting for broadcast file to be written..."
+    sleep 2
+    
+    # Show verification guidance
+    show_verification_guidance
 }
 
 # Main function
@@ -149,7 +235,6 @@ main() {
 
     # Prompt for environment setup
     prompt_rpc_url
-    prompt_etherscan_key
 
     # Run deployment
     run_deployment
@@ -157,8 +242,8 @@ main() {
     # Check result
     if [[ $? -eq 0 ]]; then
         print_success "Deployment completed!"
-        print_info "Check the output above for deployed contract addresses."
-        print_info "Deployment artifacts are saved in the 'deployments/' directory."
+        print_info "Deployment artifacts are saved in the 'broadcast/' directory."
+        print_info "Use the verification commands shown above to verify your contracts."
     else
         print_error "Deployment failed. Check the error messages above."
     fi
@@ -176,13 +261,13 @@ show_help() {
     echo "This script provides a secure, interactive way to deploy the governance stack."
     echo "It will prompt you for:"
     echo "  1. RPC URL for blockchain connection"
-    echo "  2. Etherscan API key for contract verification (optional)"
-    echo "  3. Configuration file (dynamically discovered from config/)"
-    echo "  4. Distribution and splitter scenarios (parsed from your config)"
-    echo "  5. Private key (securely via Solidity prompts)"
+    echo "  2. Configuration file (dynamically discovered from config/)"
+    echo "  3. Distribution and splitter scenarios (parsed from your config)"
+    echo "  4. Private key (securely via Solidity prompts)"
     echo
     echo "The script automatically sets required environment variables and calls"
-    echo "the interactive Solidity deployment script."
+    echo "the interactive Solidity deployment script, then provides guidance for manual"
+    echo "contract verification."
     echo
     echo "Prerequisites:"
     echo "  • Foundry installed and configured"
