@@ -125,6 +125,9 @@ contract GovernanceIntegrationTest is TestHelper {
 
         // Verify quorum calculation (50% of total supply = 5000e18)
         assertEq(governor.quorum(block.number - 1), 5000e18);
+
+        // Verify OtocoManager extension: Governor should be set as Manager upon deployment
+        assertEq(governor.getManager(), address(governor));
     }
 
     /**

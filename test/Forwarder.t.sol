@@ -614,7 +614,7 @@ contract ForwarderTest is Test {
         assertEq(deployed, predicted1);
     }
 
-    function testCalculateSaltFunction() public {
+    function testCalculateSaltFunction() public view {
         address recipient1 = vm.addr(777);
         address recipient2 = vm.addr(888);
         bytes32 userSalt = keccak256("test salt");

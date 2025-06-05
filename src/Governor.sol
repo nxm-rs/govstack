@@ -10,6 +10,8 @@ import {GovernorSettings} from "@openzeppelin/contracts/governance/extensions/Go
 import {GovernorPreventLateQuorum} from "@openzeppelin/contracts/governance/extensions/GovernorPreventLateQuorum.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
+import {OtocoManager} from "./extensions/OtocoManager.sol";
+
 /// @title TokenGovernor
 /// @author Nexum Contributors
 contract Governor is
@@ -18,7 +20,8 @@ contract Governor is
     GovernorCountingSimple,
     GovernorVotes,
     GovernorVotesQuorumFraction,
-    GovernorPreventLateQuorum
+    GovernorPreventLateQuorum,
+    OtocoManager
 {
     constructor(
         string memory name,
@@ -34,6 +37,7 @@ contract Governor is
         GovernorVotesQuorumFraction(quorumPercentage)
         GovernorSettings(uint48(initialVotingDelay), uint32(initialVotingPeriod), initialProposalThreshold)
         GovernorPreventLateQuorum(lateQuorumExtension)
+        OtocoManager(address(this))
     {}
 
     /// @dev Override to resolve conflict between Governor and GovernorSettings
