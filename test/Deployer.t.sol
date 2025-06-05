@@ -19,10 +19,15 @@ contract DeployerTest is TestHelper {
         assertValidDeployment(tokenAddress, governorAddress, splitterAddress, TOKEN_NAME, GOVERNOR_NAME);
 
         Token token = Token(tokenAddress);
+        Governor governor = Governor(payable(governorAddress));
+
         assertEq(token.balanceOf(USER1), 1000 * 10 ** 18);
         assertEq(token.balanceOf(USER2), 2000 * 10 ** 18);
         assertEq(totalDistributed, 3000 * 10 ** 18);
         assertEq(splitterAddress, address(0)); // No splitter deployed
+
+        // Verify OtocoManager extension: Governor should be set as Manager upon deployment
+        assertEq(governor.getManager(), governorAddress);
     }
 
     function testDeploymentWithSplitter() public {

@@ -2,6 +2,7 @@
 pragma solidity ^0.8;
 
 /// @title IForwarder
+/// @author Nexum Contributors
 /// @notice Interface for Forwarder contracts
 /// @dev Used to interact with forwarder implementations in a type-safe manner
 interface IForwarder {

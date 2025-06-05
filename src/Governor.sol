@@ -10,15 +10,25 @@ import {GovernorSettings} from "@openzeppelin/contracts/governance/extensions/Go
 import {GovernorPreventLateQuorum} from "@openzeppelin/contracts/governance/extensions/GovernorPreventLateQuorum.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
+import {OtocoManager} from "./extensions/OtocoManager.sol";
+
 /// @title TokenGovernor
 /// @author Nexum Contributors
+/// @notice A standard OpenZeppelin-based governance contract with sane defaults and extensions:
+/// - Simple counting mechanism
+/// - Token-based voting
+/// - Quorum fraction-based quorum calculation
+/// - Settings for voting delay, period, and proposal threshold
+/// - Prevent late quorum extension mechanism
+/// - OtocoManager extension for managing token-based proposals and voting
 contract Governor is
     OZGovernor,
     GovernorSettings,
     GovernorCountingSimple,
     GovernorVotes,
     GovernorVotesQuorumFraction,
-    GovernorPreventLateQuorum
+    GovernorPreventLateQuorum,
+    OtocoManager
 {
     constructor(
         string memory name,
@@ -34,6 +44,7 @@ contract Governor is
         GovernorVotesQuorumFraction(quorumPercentage)
         GovernorSettings(uint48(initialVotingDelay), uint32(initialVotingPeriod), initialProposalThreshold)
         GovernorPreventLateQuorum(lateQuorumExtension)
+        OtocoManager(address(this))
     {}
 
     /// @dev Override to resolve conflict between Governor and GovernorSettings

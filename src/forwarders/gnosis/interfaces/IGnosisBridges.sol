@@ -2,6 +2,7 @@
 pragma solidity ^0.8;
 
 /// @title IOmnibridge
+/// @author Nexum Contributors
 /// @notice Interface for the Omnibridge contract on Gnosis Chain
 /// @dev Used for bridging ERC20 tokens between Gnosis Chain and Ethereum mainnet
 interface IOmnibridge {
