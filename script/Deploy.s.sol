@@ -103,8 +103,6 @@ contract Deploy is Script {
         runInteractiveWithScenario(configPath, distributionScenario, splitterScenario);
     }
 
-
-
     /**
      * @dev Interactive deployment with specific distribution and splitter scenarios
      * @param configPath Path to the TOML configuration file
@@ -1275,8 +1273,6 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
     }
-
-
 
     /**
      * @dev Get recipient count for a scenario
