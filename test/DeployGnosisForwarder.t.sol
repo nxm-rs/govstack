@@ -1,15 +1,15 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import "../src/forwarders/gnosis/GnosisChainForwarder.sol";
-import "../src/forwarders/gnosis/GnosisChainForwarderFactory.sol";
+import "../src/forwarders/gnosis/GnosisForwarder.sol";
+import "../src/forwarders/gnosis/GnosisForwarderFactory.sol";
 import "../script/DeployGnosisForwarder.s.sol";
 
 contract DeployGnosisForwarderTest is Test {
     DeployGnosisForwarder deployer;
-    GnosisChainForwarderFactory factory;
+    GnosisForwarderFactory factory;
     address mainnetRecipient = vm.addr(1);
     uint256 constant GNOSIS_CHAIN_ID = 100;
 
@@ -18,10 +18,10 @@ contract DeployGnosisForwarderTest is Test {
         vm.chainId(GNOSIS_CHAIN_ID);
 
         deployer = new DeployGnosisForwarder();
-        factory = new GnosisChainForwarderFactory();
+        factory = new GnosisForwarderFactory();
     }
 
-    function testDeploymentScriptOnGnosisChain() public view {
+    function testDeploymentScriptOnGnosis() public view {
         // Verify we're on the correct chain
         assertEq(block.chainid, GNOSIS_CHAIN_ID);
 
@@ -47,7 +47,7 @@ contract DeployGnosisForwarderTest is Test {
         assertEq(predictedAddress, deployedAddress);
 
         // Verify the forwarder is initialized correctly
-        GnosisChainForwarder forwarder = GnosisChainForwarder(payable(deployedAddress));
+        GnosisForwarder forwarder = GnosisForwarder(payable(deployedAddress));
         assertTrue(forwarder.initialized());
         assertEq(forwarder.mainnetRecipient(), testRecipient);
         assertEq(block.chainid, GNOSIS_CHAIN_ID);
@@ -69,7 +69,7 @@ contract DeployGnosisForwarderTest is Test {
 
             assertEq(predicted, deployed);
 
-            GnosisChainForwarder forwarder = GnosisChainForwarder(payable(deployed));
+            GnosisForwarder forwarder = GnosisForwarder(payable(deployed));
             assertTrue(forwarder.initialized());
             assertEq(forwarder.mainnetRecipient(), recipient);
         }
@@ -77,7 +77,7 @@ contract DeployGnosisForwarderTest is Test {
 
     function testVerifyDeployment() public {
         // Deploy a factory and verify it
-        GnosisChainForwarderFactory testFactory = new GnosisChainForwarderFactory();
+        GnosisForwarderFactory testFactory = new GnosisForwarderFactory();
 
         // This should not revert
         deployer.verifyDeployment(address(testFactory));
@@ -86,7 +86,7 @@ contract DeployGnosisForwarderTest is Test {
         address implementation = testFactory.getImplementation();
         assertTrue(implementation != address(0));
 
-        GnosisChainForwarder impl = GnosisChainForwarder(payable(implementation));
+        GnosisForwarder impl = GnosisForwarder(payable(implementation));
         assertEq(block.chainid, GNOSIS_CHAIN_ID);
         assertTrue(address(impl.OMNIBRIDGE()) != address(0) && address(impl.XDAI_BRIDGE()) != address(0));
     }
@@ -102,7 +102,7 @@ contract DeployGnosisForwarderTest is Test {
         assertEq(predicted1, predicted2, "Same factory predictions should match");
 
         // Now test that different factories have different implementations
-        GnosisChainForwarderFactory factory2 = new GnosisChainForwarderFactory();
+        GnosisForwarderFactory factory2 = new GnosisForwarderFactory();
         address predicted3 = factory2.predictForwarderAddress(testRecipient);
 
         // Different factories will have different implementations, so different predictions
@@ -113,8 +113,8 @@ contract DeployGnosisForwarderTest is Test {
         // Change to a different chain
         vm.chainId(1); // Ethereum mainnet
 
-        // Creating a new GnosisChainForwarder should fail on wrong chain
-        GnosisChainForwarder newForwarder = new GnosisChainForwarder();
+        // Creating a new GnosisForwarder should fail on wrong chain
+        GnosisForwarder newForwarder = new GnosisForwarder();
 
         vm.expectRevert(Forwarder.InvalidChain.selector);
         newForwarder.initialize(mainnetRecipient);
@@ -144,7 +144,7 @@ contract DeployGnosisForwarderTest is Test {
 
     function testDeploymentConstants() public {
         // Verify that our test forwarder has correct constants
-        GnosisChainForwarder testForwarder = new GnosisChainForwarder();
+        GnosisForwarder testForwarder = new GnosisForwarder();
         assertEq(testForwarder.GNOSIS_CHAIN_ID(), 100);
         assertEq(address(testForwarder.OMNIBRIDGE()), 0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d);
         assertEq(address(testForwarder.XDAI_BRIDGE()), 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6);
@@ -155,7 +155,7 @@ contract DeployGnosisForwarderTest is Test {
 
         // Deploy via factory
         address forwarderAddr = factory.deployForwarder(recipient);
-        GnosisChainForwarder forwarder = GnosisChainForwarder(payable(forwarderAddr));
+        GnosisForwarder forwarder = GnosisForwarder(payable(forwarderAddr));
 
         // Should be initialized
         assertTrue(forwarder.initialized());
@@ -169,7 +169,7 @@ contract DeployGnosisForwarderTest is Test {
     function testBridgeConfigurationInDeployment() public {
         // Deploy forwarder and check bridge configuration
         address forwarderAddr = factory.deployForwarder(mainnetRecipient);
-        GnosisChainForwarder forwarder = GnosisChainForwarder(payable(forwarderAddr));
+        GnosisForwarder forwarder = GnosisForwarder(payable(forwarderAddr));
 
         assertTrue(address(forwarder.OMNIBRIDGE()) != address(0) && address(forwarder.XDAI_BRIDGE()) != address(0));
 
@@ -180,8 +180,8 @@ contract DeployGnosisForwarderTest is Test {
 
     function testFactoryImplementationConsistency() public {
         // Deploy multiple factories and ensure they use the same implementation
-        GnosisChainForwarderFactory factory1 = new GnosisChainForwarderFactory();
-        GnosisChainForwarderFactory factory2 = new GnosisChainForwarderFactory();
+        GnosisForwarderFactory factory1 = new GnosisForwarderFactory();
+        GnosisForwarderFactory factory2 = new GnosisForwarderFactory();
 
         address impl1 = factory1.getImplementation();
         address impl2 = factory2.getImplementation();
@@ -190,9 +190,9 @@ contract DeployGnosisForwarderTest is Test {
         assertTrue(impl1 != address(0));
         assertTrue(impl2 != address(0));
 
-        // Both should be GnosisChainForwarder instances
-        GnosisChainForwarder forwarder1 = GnosisChainForwarder(payable(impl1));
-        GnosisChainForwarder forwarder2 = GnosisChainForwarder(payable(impl2));
+        // Both should be GnosisForwarder instances
+        GnosisForwarder forwarder1 = GnosisForwarder(payable(impl1));
+        GnosisForwarder forwarder2 = GnosisForwarder(payable(impl2));
 
         assertEq(block.chainid, block.chainid);
         assertEq(address(forwarder1.OMNIBRIDGE()), address(forwarder2.OMNIBRIDGE()));

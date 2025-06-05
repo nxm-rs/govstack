@@ -10,9 +10,7 @@ contract DeployerTest is TestHelper {
 
         vm.recordLogs();
 
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER
-        );
+        new TestableDeployer(createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         (address tokenAddress, address governorAddress, address splitterAddress, uint256 totalDistributed,) =
@@ -33,22 +31,20 @@ contract DeployerTest is TestHelper {
 
         vm.recordLogs();
 
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), splitterConfig, distributions, OWNER
-        );
+        new TestableDeployer(createBasicTokenConfig(), createBasicGovernorConfig(), splitterConfig, distributions);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         (address tokenAddress, address governorAddress, address splitterAddress,,) = extractDeploymentAddresses(logs);
 
         assertValidDeployment(tokenAddress, governorAddress, splitterAddress, TOKEN_NAME, GOVERNOR_NAME);
 
-        TokenSplitter splitter = TokenSplitter(splitterAddress);
+        Splitter splitter = Splitter(splitterAddress);
         assertTrue(_hasPayees(splitterAddress)); // Payees are now configured during deployment
 
         // Verify that the splitter is properly configured
-        TokenSplitter.PayeeData[] memory payees = new TokenSplitter.PayeeData[](2);
-        payees[0] = TokenSplitter.PayeeData({payee: PAYEE1, shares: 6000});
-        payees[1] = TokenSplitter.PayeeData({payee: PAYEE2, shares: 4000});
+        Splitter.PayeeData[] memory payees = new Splitter.PayeeData[](2);
+        payees[0] = Splitter.PayeeData({payee: PAYEE1, shares: 6000});
+        payees[1] = Splitter.PayeeData({payee: PAYEE2, shares: 4000});
 
         bytes memory packedPayeesData = _createPackedPayeesData(payees);
 
@@ -69,70 +65,29 @@ contract DeployerTest is TestHelper {
         AbstractDeployer.SplitterConfig memory emptySplitterConfig;
         AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
 
-        AbstractDeployer.TokenConfig memory invalidTokenConfig =
-            AbstractDeployer.TokenConfig({name: "", symbol: TOKEN_SYMBOL});
-
-        vm.expectRevert(AbstractDeployer.TokenNameEmpty.selector);
-        new TestableDeployer(invalidTokenConfig, createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER);
-
-        invalidTokenConfig = AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: ""});
-
-        vm.expectRevert(AbstractDeployer.TokenSymbolEmpty.selector);
-        new TestableDeployer(invalidTokenConfig, createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER);
+        testInvalidTokenConfigScenarios(createBasicGovernorConfig(), emptySplitterConfig, distributions);
     }
 
     function testInvalidGovernorConfig() public {
         AbstractDeployer.SplitterConfig memory emptySplitterConfig;
         AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
 
-        AbstractDeployer.GovernorConfig memory invalidGovernorConfig = AbstractDeployer.GovernorConfig({
-            name: "",
-            votingDelay: VOTING_DELAY,
-            votingPeriod: VOTING_PERIOD,
-            quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
-        });
-
-        vm.expectRevert(AbstractDeployer.GovernorNameEmpty.selector);
-        new TestableDeployer(createBasicTokenConfig(), invalidGovernorConfig, emptySplitterConfig, distributions, OWNER);
+        testInvalidGovernorConfigScenarios(createBasicTokenConfig(), emptySplitterConfig, distributions);
     }
 
     function testInvalidOwner() public {
         AbstractDeployer.SplitterConfig memory emptySplitterConfig;
         AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
 
-        vm.expectRevert(AbstractDeployer.FinalOwnerZeroAddress.selector);
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions, address(0)
+        testInvalidOwnerScenarios(
+            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions
         );
     }
 
     function testInvalidDistributions() public {
         AbstractDeployer.SplitterConfig memory emptySplitterConfig;
 
-        AbstractDeployer.TokenDistribution[] memory invalidDistributions = new AbstractDeployer.TokenDistribution[](1);
-        invalidDistributions[0] = AbstractDeployer.TokenDistribution({recipient: address(0), amount: 1000});
-
-        vm.expectRevert(AbstractDeployer.RecipientZeroAddress.selector);
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, invalidDistributions, OWNER
-        );
-
-        invalidDistributions[0] = AbstractDeployer.TokenDistribution({recipient: USER1, amount: 0});
-
-        vm.expectRevert(AbstractDeployer.AmountMustBeGreaterThanZero.selector);
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, invalidDistributions, OWNER
-        );
-
-        AbstractDeployer.TokenDistribution[] memory duplicateDistributions = new AbstractDeployer.TokenDistribution[](2);
-        duplicateDistributions[0] = AbstractDeployer.TokenDistribution({recipient: USER1, amount: 1000});
-        duplicateDistributions[1] = AbstractDeployer.TokenDistribution({recipient: USER1, amount: 2000});
-
-        vm.expectRevert(AbstractDeployer.DuplicateRecipient.selector);
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, duplicateDistributions, OWNER
-        );
+        testInvalidDistributionScenarios(createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig);
     }
 
     function testInvalidSplitterConfig() public {
@@ -146,9 +101,9 @@ contract DeployerTest is TestHelper {
 
         // Deployer should succeed, but validation will fail in TokenSplitter.updatePayees()
         vm.recordLogs();
-        vm.expectRevert(TokenSplitter.InvalidTotalShares.selector);
+        vm.expectRevert(Splitter.InvalidTotalShares.selector);
         new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions, OWNER
+            createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions
         );
 
         // Invalid payee (zero address)
@@ -156,62 +111,45 @@ contract DeployerTest is TestHelper {
 
         invalidSplitterConfig = AbstractDeployer.SplitterConfig({packedPayeesData: zeroAddressPackedData});
 
-        vm.expectRevert(TokenSplitter.InvalidShares.selector);
+        vm.expectRevert(Splitter.InvalidShares.selector);
         new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions, OWNER
+            createBasicTokenConfig(), createBasicGovernorConfig(), invalidSplitterConfig, distributions
         );
     }
 
     function testValidateDistributions() public pure {
         AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
 
-        // Test validation logic by checking array properties directly
-
-        AbstractDeployer.TokenDistribution[] memory invalidDistributions = new AbstractDeployer.TokenDistribution[](1);
-        invalidDistributions[0] = AbstractDeployer.TokenDistribution({recipient: address(0), amount: 1000});
-
-        // Test validation logic by checking array properties directly
-        assertTrue(distributions.length > 0);
-        assertTrue(distributions[0].recipient != address(0));
-        assertTrue(distributions[0].amount > 0);
-
-        // Test invalid case
-        assertFalse(invalidDistributions[0].recipient != address(0));
+        // Test validation using helper function
+        assertValidDistributions(distributions);
     }
 
     function testValidateSplitterConfig() public pure {
         AbstractDeployer.SplitterConfig memory emptySplitterConfig;
-        // Test empty config is valid
-        assertTrue(emptySplitterConfig.packedPayeesData.length == 0);
-
         AbstractDeployer.SplitterConfig memory validSplitterConfig = createBasicSplitterConfig();
-        // Test valid config has data
-        assertTrue(validSplitterConfig.packedPayeesData.length > 0);
-        assertTrue(validSplitterConfig.packedPayeesData.length % 22 == 0);
+
+        // Test validation using helper functions
+        assertValidSplitterConfig(emptySplitterConfig);
+        assertValidSplitterConfig(validSplitterConfig);
 
         // Test invalid calldata length
         bytes memory invalidData = abi.encodePacked(uint16(6000)); // Only 2 bytes, not 22
         AbstractDeployer.SplitterConfig memory invalidConfig =
             AbstractDeployer.SplitterConfig({packedPayeesData: invalidData});
+
+        // Validate that this would fail (check length manually)
         assertFalse(invalidConfig.packedPayeesData.length % 22 == 0);
     }
 
     function testCalculateTotalDistribution() public pure {
         AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
 
-        // Calculate total manually to test logic
-        uint256 total = 0;
-        for (uint256 i = 0; i < distributions.length; i++) {
-            total += distributions[i].amount;
-        }
+        // Test using helper function
+        uint256 total = calculateTotalDistribution(distributions);
         assertEq(total, 3000 * 10 ** 18);
 
         AbstractDeployer.TokenDistribution[] memory emptyDistributions = new AbstractDeployer.TokenDistribution[](0);
-        // Test empty array
-        uint256 emptyTotal = 0;
-        for (uint256 i = 0; i < emptyDistributions.length; i++) {
-            emptyTotal += emptyDistributions[i].amount;
-        }
+        uint256 emptyTotal = calculateTotalDistribution(emptyDistributions);
         assertEq(emptyTotal, 0);
     }
 
@@ -222,15 +160,58 @@ contract DeployerTest is TestHelper {
         vm.recordLogs();
 
         new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, emptyDistributions, OWNER
+            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, emptyDistributions
         );
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        (address tokenAddress,,, uint256 totalDistributed,) = extractDeploymentAddresses(logs);
+        (address tokenAddress, address governorAddress,, uint256 totalDistributed,) = extractDeploymentAddresses(logs);
 
         Token token = Token(tokenAddress);
         assertEq(totalDistributed, 0);
         assertEq(token.totalSupply(), 0);
-        assertEq(token.owner(), OWNER);
+        assertEq(token.owner(), governorAddress);
+    }
+
+    function testGovernorOwnsTokenAndCanMintBurn() public {
+        AbstractDeployer.SplitterConfig memory emptySplitterConfig;
+        AbstractDeployer.TokenDistribution[] memory distributions = createBasicTokenDistribution();
+
+        vm.recordLogs();
+
+        new TestableDeployer(createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        (address tokenAddress, address governorAddress,,,) = extractDeploymentAddresses(logs);
+
+        Token token = Token(tokenAddress);
+
+        // Verify Governor owns the token
+        assertEq(token.owner(), governorAddress, "Token should be owned by Governor");
+
+        // Test that Governor can mint tokens
+        uint256 mintAmount = 1000 * 10 ** 18;
+        vm.prank(governorAddress);
+        token.mint(USER1, mintAmount);
+        assertEq(token.balanceOf(USER1), mintAmount + 1000 * 10 ** 18); // USER1 already had 1000 from distribution
+
+        // Test that Governor can burn tokens
+        uint256 burnAmount = 500 * 10 ** 18;
+        vm.prank(governorAddress);
+        token.burn(USER1, burnAmount);
+        assertEq(token.balanceOf(USER1), mintAmount + 1000 * 10 ** 18 - burnAmount);
+
+        // Test that non-Governor cannot mint/burn
+        vm.expectRevert();
+        vm.prank(USER1);
+        token.mint(USER2, 100);
+
+        vm.expectRevert();
+        vm.prank(USER1);
+        token.burn(USER1, 100);
+
+        // Test that Governor can transfer ownership
+        vm.prank(governorAddress);
+        token.transferOwnership(USER1);
+        assertEq(token.owner(), USER1);
     }
 }

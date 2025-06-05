@@ -5,10 +5,10 @@ import "../../Forwarder.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IOmnibridge, IxDaiBridge, IBridgedToken, IAMBBridge} from "./interfaces/IGnosisBridges.sol";
 
-/// @title GnosisChainForwarder
+/// @title GnosisForwarder
 /// @notice Concrete implementation of Forwarder for Gnosis Chain using Omnibridge/AMB
 /// @dev Forwards tokens from Gnosis Chain to Ethereum mainnet via the canonical bridge
-contract GnosisChainForwarder is Forwarder {
+contract GnosisForwarder is Forwarder {
     using SafeTransferLib for address;
 
     /// @notice The Omnibridge contract address on Gnosis Chain
@@ -112,29 +112,6 @@ contract GnosisChainForwarder is Forwarder {
     /// @return True if the token is valid for bridging
     function isValidToken(address token) external view returns (bool) {
         return _isValidBridgedToken(token);
-    }
-
-    /// @notice Emergency function to recover tokens if bridge fails
-    /// @dev Only callable by the mainnet recipient (acts as admin)
-    /// @param token The token to recover
-    /// @param to The address to send recovered tokens to
-    function emergencyRecover(address token, address to) external onlyInitialized {
-        require(msg.sender == mainnetRecipient, "Only recipient can recover");
-        require(to != address(0), "Invalid recovery address");
-
-        if (token == address(0)) {
-            // Recover native tokens
-            uint256 balance = address(this).balance;
-            if (balance > 0) {
-                to.safeTransferETH(balance);
-            }
-        } else {
-            // Recover ERC20 tokens
-            uint256 balance = ERC20(token).balanceOf(address(this));
-            if (balance > 0) {
-                token.safeTransfer(to, balance);
-            }
-        }
     }
 
     /// @notice Allow arbitrary calls to be made by authorized senders.

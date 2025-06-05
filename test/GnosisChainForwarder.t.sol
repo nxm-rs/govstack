@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
-import "../src/forwarders/gnosis/GnosisChainForwarder.sol";
-import "../src/forwarders/gnosis/GnosisChainForwarderFactory.sol";
+import "../src/forwarders/gnosis/GnosisForwarder.sol";
+import "../src/forwarders/gnosis/GnosisForwarderFactory.sol";
 import "../src/forwarders/gnosis/interfaces/IGnosisBridges.sol";
 
 /// @title TestERC20
@@ -32,12 +32,12 @@ contract TestERC20 is ERC20 {
     }
 }
 
-contract GnosisChainForwarderForkTest is Test {
+contract GnosisForwarderForkTest is Test {
     string constant GNOSIS_RPC = "https://rpc.gnosischain.com";
     uint256 constant GNOSIS_CHAIN_ID = 100;
 
-    GnosisChainForwarderFactory factory;
-    GnosisChainForwarder forwarder;
+    GnosisForwarderFactory factory;
+    GnosisForwarder forwarder;
     address mainnetRecipient = vm.addr(1);
     address user = vm.addr(2);
 
@@ -61,11 +61,11 @@ contract GnosisChainForwarderForkTest is Test {
         assertEq(block.chainid, GNOSIS_CHAIN_ID);
 
         // Deploy factory
-        factory = new GnosisChainForwarderFactory();
+        factory = new GnosisForwarderFactory();
 
         // Deploy forwarder instance
         address payable forwarderAddr = factory.deployForwarder(mainnetRecipient);
-        forwarder = GnosisChainForwarder(forwarderAddr);
+        forwarder = GnosisForwarder(forwarderAddr);
 
         // Fund user account
         vm.deal(user, 10 ether);
@@ -164,19 +164,6 @@ contract GnosisChainForwarderForkTest is Test {
         assertEq(address(forwarder).balance, initialBalance + 2 ether);
     }
 
-    function testGetBalance() public {
-        TestERC20 testToken = new TestERC20("Test Token", "TEST");
-
-        // Mint tokens to forwarder
-        testToken.mint(address(forwarder), 100 ether);
-
-        // Send some native tokens
-        vm.deal(address(forwarder), 5 ether);
-
-        assertEq(forwarder.getBalance(address(testToken)), 100 ether);
-        assertEq(forwarder.getBalance(address(0)), 5 ether);
-    }
-
     function testTokenValidation() public {
         TestERC20 testToken = new TestERC20("Test Token", "TEST");
 
@@ -221,8 +208,8 @@ contract GnosisChainForwarderForkTest is Test {
         assertTrue(forwarder1 != forwarder2);
 
         // Both should be properly initialized
-        assertEq(GnosisChainForwarder(payable(forwarder1)).mainnetRecipient(), recipient1);
-        assertEq(GnosisChainForwarder(payable(forwarder2)).mainnetRecipient(), recipient2);
+        assertEq(GnosisForwarder(payable(forwarder1)).mainnetRecipient(), recipient1);
+        assertEq(GnosisForwarder(payable(forwarder2)).mainnetRecipient(), recipient2);
 
         // Duplicate deployment returns the same address
         address forwarder1Dup = factory.getOrDeployForwarder(recipient1);
@@ -239,7 +226,7 @@ contract GnosisChainForwarderForkTest is Test {
             address deployed = factory.deployForwarder(recipients[i]);
             assertEq(predicted, deployed);
 
-            GnosisChainForwarder fw = GnosisChainForwarder(payable(deployed));
+            GnosisForwarder fw = GnosisForwarder(payable(deployed));
             assertTrue(fw.initialized());
             assertEq(fw.mainnetRecipient(), recipients[i]);
             assertEq(block.chainid, GNOSIS_CHAIN_ID);
@@ -257,7 +244,6 @@ contract GnosisChainForwarderForkTest is Test {
         deal(USDC_GNOSIS, address(forwarder), 1000 * 10 ** 6); // 1000 USDC (6 decimals)
 
         assertEq(usdc.balanceOf(address(forwarder)), 1000 * 10 ** 6);
-        assertEq(forwarder.getBalance(USDC_GNOSIS), 1000 * 10 ** 6);
     }
 
     function testMultipleTokenTypes() public {
@@ -272,9 +258,9 @@ contract GnosisChainForwarderForkTest is Test {
         vm.deal(address(forwarder), 3 ether);
 
         // Check balances
-        assertEq(forwarder.getBalance(address(testToken)), 500 ether);
-        assertEq(forwarder.getBalance(WETH_GNOSIS), 2 ether);
-        assertEq(forwarder.getBalance(address(0)), 3 ether);
+        assertEq(testToken.balanceOf(address(forwarder)), 500 ether);
+        assertEq(ERC20(WETH_GNOSIS).balanceOf(address(forwarder)), 2 ether);
+        assertEq(address(forwarder).balance, 3 ether);
     }
 
     function testChainIdValidation() public view {
@@ -432,7 +418,7 @@ contract GnosisChainForwarderForkTest is Test {
         // unauthorized sender
         address notReceiver = makeAddr("notReceiver");
         vm.prank(notReceiver);
-        vm.expectRevert(GnosisChainForwarder.UnauthorizedSender.selector);
+        vm.expectRevert(GnosisForwarder.UnauthorizedSender.selector);
         forwarder.arbitraryCall(notReceiver, 0, hex"");
 
         MockTargetContract target = new MockTargetContract();
@@ -458,7 +444,7 @@ contract GnosisChainForwarderForkTest is Test {
         // unauthorized sender
         address notReceiver = makeAddr("notReceiver");
         vm.prank(notReceiver);
-        vm.expectRevert(GnosisChainForwarder.UnauthorizedSender.selector);
+        vm.expectRevert(GnosisForwarder.UnauthorizedSender.selector);
         forwarder.arbitraryCall(notReceiver, 0, hex"");
 
         MockTargetContract target = new MockTargetContract();
@@ -467,13 +453,13 @@ contract GnosisChainForwarderForkTest is Test {
         address ambBridge = address(forwarder.AMB_BRIDGE());
         // amb bridge sender
         vm.prank(ambBridge);
-        vm.expectRevert(GnosisChainForwarder.UnauthorizedSender.selector);
+        vm.expectRevert(GnosisForwarder.UnauthorizedSender.selector);
         forwarder.arbitraryCall(address(target), 0, abi.encodeCall(MockTargetContract.setValue, (1)));
 
         // set AMB bridge messageSender to mainnetRecipient
         vm.mockCall(ambBridge, abi.encodeCall(IAMBBridge.messageSender, ()), abi.encode(mainnetRecipient));
         vm.prank(ambBridge);
-        vm.expectRevert(GnosisChainForwarder.UnauthorizedSender.selector);
+        vm.expectRevert(GnosisForwarder.UnauthorizedSender.selector);
         forwarder.arbitraryCall(address(target), 0, abi.encodeCall(MockTargetContract.setValue, (1)));
 
         // set AMB source chain to 1

@@ -4,8 +4,9 @@ pragma solidity ^0.8;
 import "forge-std/Test.sol";
 import "../src/Token.sol";
 import "../src/Governor.sol";
-import "../src/TokenSplitter.sol";
+import "../src/Splitter.sol";
 import "../src/Deployer.sol";
+import "../script/Deploy.s.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
 /// @title TestERC20
@@ -36,8 +37,11 @@ contract TestERC20 is ERC20 {
 /// @notice Interface for MockTarget contract
 interface IMockTarget {
     function setValue(uint256 _value) external;
+
     function reset() external;
+
     function value() external view returns (uint256);
+
     function executed() external view returns (bool);
 }
 
@@ -76,6 +80,7 @@ contract TestHelper is Test {
     uint256 public constant VOTING_PERIOD = 1000;
     uint256 public constant QUORUM_NUMERATOR = 50;
     uint48 public constant LATE_QUORUM_EXTENSION = 64;
+    uint256 public constant PROPOSAL_THRESHOLD = 1;
 
     // Events to match contract events
     event TokensReleased(address indexed token, address indexed to, uint256 amount);
@@ -120,12 +125,159 @@ contract TestHelper is Test {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: PROPOSAL_THRESHOLD
         });
     }
 
     function deployMockToken() internal returns (TestERC20) {
         return new TestERC20("Mock Token", "MOCK");
+    }
+
+    // ============ COMMON DEPLOYMENT SETUP ============
+
+    /// @notice Creates a new Deploy instance for testing
+    /// @return deployer The Deploy instance
+    function createDeployer() internal returns (Deploy) {
+        return new Deploy();
+    }
+
+    /// @notice Sets up Deploy instance with localhost chain configuration
+    /// @return deployer The configured Deploy instance
+    function setupDeployerForLocalhost() internal returns (Deploy) {
+        vm.chainId(31337);
+        return createDeployer();
+    }
+
+    // ============ COMMON VALIDATION HELPERS ============
+
+    /// @notice Tests basic distribution validation logic
+    /// @param distributions Array of token distributions to validate
+    function assertValidDistributions(AbstractDeployer.TokenDistribution[] memory distributions) internal pure {
+        assertTrue(distributions.length > 0, "Distributions array should not be empty");
+
+        for (uint256 i = 0; i < distributions.length; i++) {
+            assertTrue(distributions[i].recipient != address(0), "Recipient should not be zero address");
+            assertTrue(distributions[i].amount > 0, "Amount should be greater than zero");
+        }
+    }
+
+    /// @notice Tests splitter config validation logic
+    /// @param config Splitter configuration to validate
+    function assertValidSplitterConfig(AbstractDeployer.SplitterConfig memory config) internal pure {
+        // Empty config is valid
+        if (config.packedPayeesData.length == 0) {
+            return;
+        }
+
+        // Non-empty config must have valid structure (22 bytes per payee: 2 bytes shares + 20 bytes address)
+        assertTrue(config.packedPayeesData.length % 22 == 0, "Invalid packed payees data length");
+        assertTrue(config.packedPayeesData.length > 0, "Non-empty config should have data");
+    }
+
+    /// @notice Calculates total distribution amount
+    /// @param distributions Array of token distributions
+    /// @return total Total amount across all distributions
+    function calculateTotalDistribution(AbstractDeployer.TokenDistribution[] memory distributions)
+        internal
+        pure
+        returns (uint256 total)
+    {
+        for (uint256 i = 0; i < distributions.length; i++) {
+            total += distributions[i].amount;
+        }
+    }
+
+    /// @notice Tests invalid distribution scenarios
+    /// @param tokenConfig Token configuration to use
+    /// @param governorConfig Governor configuration to use
+    /// @param splitterConfig Splitter configuration to use
+    function testInvalidDistributionScenarios(
+        AbstractDeployer.TokenConfig memory tokenConfig,
+        AbstractDeployer.GovernorConfig memory governorConfig,
+        AbstractDeployer.SplitterConfig memory splitterConfig
+    ) internal {
+        // Test zero address recipient
+        AbstractDeployer.TokenDistribution[] memory invalidDistributions = new AbstractDeployer.TokenDistribution[](1);
+        invalidDistributions[0] = AbstractDeployer.TokenDistribution({recipient: address(0), amount: 1000});
+
+        vm.expectRevert(AbstractDeployer.RecipientZeroAddress.selector);
+        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, invalidDistributions);
+
+        // Test zero amount
+        invalidDistributions[0] = AbstractDeployer.TokenDistribution({recipient: USER1, amount: 0});
+
+        vm.expectRevert(AbstractDeployer.AmountMustBeGreaterThanZero.selector);
+        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, invalidDistributions);
+
+        // Test duplicate recipients
+        AbstractDeployer.TokenDistribution[] memory duplicateDistributions = new AbstractDeployer.TokenDistribution[](2);
+        duplicateDistributions[0] = AbstractDeployer.TokenDistribution({recipient: USER1, amount: 1000});
+        duplicateDistributions[1] = AbstractDeployer.TokenDistribution({recipient: USER1, amount: 2000});
+
+        vm.expectRevert(AbstractDeployer.DuplicateRecipient.selector);
+        new TestableDeployer(tokenConfig, governorConfig, splitterConfig, duplicateDistributions);
+    }
+
+    /// @notice Tests invalid token configuration scenarios
+    /// @param governorConfig Governor configuration to use
+    /// @param splitterConfig Splitter configuration to use
+    /// @param distributions Token distributions to use
+    function testInvalidTokenConfigScenarios(
+        AbstractDeployer.GovernorConfig memory governorConfig,
+        AbstractDeployer.SplitterConfig memory splitterConfig,
+        AbstractDeployer.TokenDistribution[] memory distributions
+    ) internal {
+        // Test empty token name
+        AbstractDeployer.TokenConfig memory invalidTokenConfig =
+            AbstractDeployer.TokenConfig({name: "", symbol: TOKEN_SYMBOL});
+
+        vm.expectRevert(AbstractDeployer.TokenNameEmpty.selector);
+        new TestableDeployer(invalidTokenConfig, governorConfig, splitterConfig, distributions);
+
+        // Test empty token symbol
+        invalidTokenConfig = AbstractDeployer.TokenConfig({name: TOKEN_NAME, symbol: ""});
+
+        vm.expectRevert(AbstractDeployer.TokenSymbolEmpty.selector);
+        new TestableDeployer(invalidTokenConfig, governorConfig, splitterConfig, distributions);
+    }
+
+    /// @notice Tests invalid governor configuration scenarios
+    /// @param tokenConfig Token configuration to use
+    /// @param splitterConfig Splitter configuration to use
+    /// @param distributions Token distributions to use
+    function testInvalidGovernorConfigScenarios(
+        AbstractDeployer.TokenConfig memory tokenConfig,
+        AbstractDeployer.SplitterConfig memory splitterConfig,
+        AbstractDeployer.TokenDistribution[] memory distributions
+    ) internal {
+        // Test empty governor name
+        AbstractDeployer.GovernorConfig memory invalidGovernorConfig = AbstractDeployer.GovernorConfig({
+            name: "",
+            votingDelay: VOTING_DELAY,
+            votingPeriod: VOTING_PERIOD,
+            quorumNumerator: QUORUM_NUMERATOR,
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: PROPOSAL_THRESHOLD
+        });
+
+        vm.expectRevert(AbstractDeployer.GovernorNameEmpty.selector);
+        new TestableDeployer(tokenConfig, invalidGovernorConfig, splitterConfig, distributions);
+    }
+
+    /// @notice Tests invalid owner scenarios
+    /// @param tokenConfig Token configuration to use
+    /// @param governorConfig Governor configuration to use
+    /// @param splitterConfig Splitter configuration to use
+    /// @param distributions Token distributions to use
+    function testInvalidOwnerScenarios(
+        AbstractDeployer.TokenConfig memory tokenConfig,
+        AbstractDeployer.GovernorConfig memory governorConfig,
+        AbstractDeployer.SplitterConfig memory splitterConfig,
+        AbstractDeployer.TokenDistribution[] memory distributions
+    ) internal {
+        // This test is no longer relevant since finalOwner parameter was removed
+        // The Governor is automatically the owner of the token
     }
 
     function expectEmitTokensReleased(address token, address to, uint256 amount) internal {
@@ -150,12 +302,11 @@ contract TestHelper is Test {
         returns (address token, address governor, address splitter, uint256 totalDistributed, bytes32 salt)
     {
         for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == keccak256("DeploymentCompleted(address,address,address,address,uint256,bytes32)"))
-            {
+            if (logs[i].topics[0] == keccak256("DeploymentCompleted(address,address,address,uint256,bytes32)")) {
                 token = address(uint160(uint256(logs[i].topics[1])));
                 governor = address(uint160(uint256(logs[i].topics[2])));
                 splitter = address(uint160(uint256(logs[i].topics[3])));
-                (, uint256 distributed, bytes32 deploymentSalt) = abi.decode(logs[i].data, (address, uint256, bytes32));
+                (uint256 distributed, bytes32 deploymentSalt) = abi.decode(logs[i].data, (uint256, bytes32));
                 totalDistributed = distributed;
                 salt = deploymentSalt;
                 break;
@@ -190,14 +341,14 @@ contract TestHelper is Test {
         assertTrue(governorAddress != address(0), "Governor address should not be zero");
 
         Token token = Token(tokenAddress);
-        TokenGovernor governor = TokenGovernor(payable(governorAddress));
+        Governor governor = Governor(payable(governorAddress));
 
         assertEq(token.name(), expectedTokenName);
         assertEq(governor.name(), expectedGovernorName);
-        assertEq(token.owner(), OWNER);
+        assertEq(token.owner(), governorAddress, "Token should be owned by Governor");
 
         if (splitterAddress != address(0)) {
-            TokenSplitter splitter = TokenSplitter(splitterAddress);
+            Splitter splitter = Splitter(splitterAddress);
             // In the new implementation, splitter is configured with payees during deployment
             assertTrue(splitter.payeesHash() != bytes32(0));
         }
@@ -254,7 +405,7 @@ contract TestHelper is Test {
         uint256 expectedAbstain
     ) internal view {
         (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes) =
-            TokenGovernor(payable(governorAddress)).proposalVotes(proposalId);
+            Governor(payable(governorAddress)).proposalVotes(proposalId);
         assertEq(againstVotes, expectedAgainst, "Against votes mismatch");
         assertEq(forVotes, expectedFor, "For votes mismatch");
         assertEq(abstainVotes, expectedAbstain, "Abstain votes mismatch");
@@ -262,7 +413,7 @@ contract TestHelper is Test {
 
     // Helper to assert proposal state
     function assertProposalState(address governorAddress, uint256 proposalId, uint8 expectedState) internal view {
-        uint8 actualState = uint8(TokenGovernor(payable(governorAddress)).state(proposalId));
+        uint8 actualState = uint8(Governor(payable(governorAddress)).state(proposalId));
         assertEq(actualState, expectedState, "Proposal state mismatch");
     }
 
@@ -363,6 +514,10 @@ contract TestHelper is Test {
         vm.chainId(31337);
     }
 
+    function setupFastL2Network() internal {
+        vm.chainId(11155111); // Use Sepolia for testing fast L2
+    }
+
     // Helper to create test files and clean them up
     function writeTestFile(string memory filename, string memory content) internal {
         vm.writeFile(filename, content);
@@ -406,10 +561,10 @@ contract TestHelper is Test {
     event ProposalExecuted(uint256 proposalId);
 
     // Helper to setup common test scenario
-    function setupBasicSplitter() internal returns (TokenSplitter, TestERC20) {
+    function setupBasicSplitter() internal returns (Splitter, TestERC20) {
         TestERC20 token = deployMockToken();
 
-        TokenSplitter splitter = new TokenSplitter(OWNER);
+        Splitter splitter = new Splitter(OWNER);
 
         return (splitter, token);
     }
@@ -611,7 +766,7 @@ contract TestHelper is Test {
 
         // Verify the provided calldata matches stored hash
         bytes32 providedHash = keccak256(packedPayeesData);
-        require(providedHash == TokenSplitter(splitterAddress).payeesHash(), InvalidPayeesHash());
+        require(providedHash == Splitter(splitterAddress).payeesHash(), InvalidPayeesHash());
 
         uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
 
@@ -640,7 +795,7 @@ contract TestHelper is Test {
     }
 
     function _hasPayees(address splitterAddress) internal view returns (bool) {
-        return TokenSplitter(splitterAddress).payeesHash() != bytes32(0);
+        return Splitter(splitterAddress).payeesHash() != bytes32(0);
     }
 
     /**
@@ -649,7 +804,7 @@ contract TestHelper is Test {
      * @param payees Array of PayeeData structs containing address and shares
      * @return packedData The tightly packed bytes for use with other functions
      */
-    function _createPackedPayeesData(TokenSplitter.PayeeData[] memory payees)
+    function _createPackedPayeesData(Splitter.PayeeData[] memory payees)
         internal
         pure
         returns (bytes memory packedData)
@@ -657,7 +812,7 @@ contract TestHelper is Test {
         require(payees.length != 0, InvalidShares());
 
         // Create a memory array to sort by address
-        TokenSplitter.PayeeData[] memory sortedPayees = new TokenSplitter.PayeeData[](payees.length);
+        Splitter.PayeeData[] memory sortedPayees = new Splitter.PayeeData[](payees.length);
         for (uint256 i = 0; i < payees.length;) {
             sortedPayees[i] = payees[i];
             unchecked {
@@ -670,7 +825,7 @@ contract TestHelper is Test {
         for (uint256 i = 0; i < sortedPayees.length - 1;) {
             for (uint256 j = 0; j < sortedPayees.length - i - 1;) {
                 if (sortedPayees[j].payee > sortedPayees[j + 1].payee) {
-                    TokenSplitter.PayeeData memory temp = sortedPayees[j];
+                    Splitter.PayeeData memory temp = sortedPayees[j];
                     sortedPayees[j] = sortedPayees[j + 1];
                     sortedPayees[j + 1] = temp;
                 }
@@ -707,7 +862,7 @@ contract TestHelper is Test {
 
         // Verify the provided calldata matches stored hash
         bytes32 providedHash = keccak256(packedPayeesData);
-        require(providedHash == TokenSplitter(splitterAddress).payeesHash(), InvalidPayeesHash());
+        require(providedHash == Splitter(splitterAddress).payeesHash(), InvalidPayeesHash());
 
         uint256 payeeCount = packedPayeesData.length / PAYEE_DATA_SIZE;
         payeeAmounts = new uint256[](payeeCount);
@@ -731,7 +886,7 @@ contract TestHelper is Test {
         }
     }
 
-    function _calculatePayeesHash(TokenSplitter.PayeeData[] memory payees) internal pure returns (bytes32 hash) {
+    function _calculatePayeesHash(Splitter.PayeeData[] memory payees) internal pure returns (bytes32 hash) {
         bytes memory packedData = _createPackedPayeesData(payees);
         hash = keccak256(packedData);
     }

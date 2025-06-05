@@ -16,127 +16,127 @@ name = "DAO Governor"
 voting_delay_time = "1 day"
 voting_period_time = "1 week"
 late_quorum_extension_time = "1 hour"
-# Quorum numerator (percentage of total supply needed for quorum, in bps)
-# e.g., 500 = 5% quorum
-quorum_numerator = 500
-
-[treasury]
-# Treasury address that receives ownership of the token contract after distribution
-# This address will have minting and burning privileges and should be a secure multisig
-address = "0x1234567890123456789012345678901234567890"
+# Quorum numerator (percentage of total supply needed for quorum)
+# e.g., 5 = 5% quorum
+quorum_numerator = 5
+# Proposal threshold (minimum tokens needed to create proposal)
+proposal_threshold = 1
 
 # Distribution configurations for different scenarios
-# You can define multiple distribution scenarios and select one during deployment
+# The interactive deployment will show these scenarios with descriptions
+# Add new scenarios here and they'll automatically appear as options
 
 [distributions.default]
-# Default distribution scenario
+# Balanced governance distribution suitable for most DAOs
 description = "Standard governance token distribution"
 
 [[distributions.default.recipients]]
 name = "DAO Treasury"
 address = "0x1111111111111111111111111111111111111111"
-amount = "4000000000000000000000000"  # 4M tokens (40%)
+amount = "4000000"  # 4M tokens (40%)
 description = "Main DAO treasury for governance"
 
 [[distributions.default.recipients]]
 name = "Core Contributors"
 address = "0x2222222222222222222222222222222222222222"
-amount = "2500000000000000000000000"  # 2.5M tokens (25%)
+amount = "2500000"  # 2.5M tokens (25%)
 description = "Core team and early contributors"
 
 [[distributions.default.recipients]]
 name = "Ecosystem Fund"
 address = "0x3333333333333333333333333333333333333333"
-amount = "2000000000000000000000000"  # 2M tokens (20%)
+amount = "2000000"  # 2M tokens (20%)
 description = "Ecosystem development and partnerships"
 
 [[distributions.default.recipients]]
 name = "Community Rewards"
 address = "0x4444444444444444444444444444444444444444"
-amount = "1500000000000000000000000"  # 1.5M tokens (15%)
+amount = "1500000"  # 1.5M tokens (15%)
 description = "Community incentives and rewards"
 
 [distributions.startup]
-# Startup-focused distribution
+# Early-stage startup allocation with founder/investor focus
 description = "Early stage startup token distribution"
 
 [[distributions.startup.recipients]]
 name = "Founders"
 address = "0x5555555555555555555555555555555555555555"
-amount = "3000000000000000000000000"  # 3M tokens (30%)
+amount = "3000000"  # 3M tokens (30%)
 description = "Founder allocation with vesting"
 
 [[distributions.startup.recipients]]
 name = "Team"
 address = "0x6666666666666666666666666666666666666666"
-amount = "2000000000000000000000000"  # 2M tokens (20%)
+amount = "2000000"  # 2M tokens (20%)
 description = "Employee stock option pool"
 
 [[distributions.startup.recipients]]
 name = "Investors"
 address = "0x7777777777777777777777777777777777777777"
-amount = "2500000000000000000000000"  # 2.5M tokens (25%)
+amount = "2500000"  # 2.5M tokens (25%)
 description = "Seed and Series A investors"
 
 [[distributions.startup.recipients]]
 name = "Public Sale"
 address = "0x8888888888888888888888888888888888888888"
-amount = "2500000000000000000000000"  # 2.5M tokens (25%)
+amount = "2500000"  # 2.5M tokens (25%)
 description = "Public token sale allocation"
 
 [distributions.dao]
-# DAO-focused distribution
+# Decentralized protocol with heavy treasury weighting
 description = "Decentralized autonomous organization distribution"
 
 [[distributions.dao.recipients]]
 name = "DAO Treasury"
 address = "0xDadaDadadadadadaDaDadAdaDADAdadAdADaDADA"
-amount = "5000000000000000000000000"  # 5M tokens (50%)
+amount = "5000000"  # 5M tokens (50%)
 description = "Main DAO treasury for governance decisions"
 
 [[distributions.dao.recipients]]
 name = "Liquidity Mining"
 address = "0xC0C0c0c0C0C0c0c0c0C0c0C0C0C0C0C0C0C0c0c0"
-amount = "2000000000000000000000000"  # 2M tokens (20%)
+amount = "2000000"  # 2M tokens (20%)
 description = "Liquidity provider rewards"
 
 [[distributions.dao.recipients]]
 name = "Developer Grants"
 address = "0xEceCecECEcecEceceCECEcEcECeCeCeCeCECECEc"
-amount = "1500000000000000000000000"  # 1.5M tokens (15%)
+amount = "1500000"  # 1.5M tokens (15%)
 description = "Developer and builder grants"
 
 [[distributions.dao.recipients]]
 name = "Community Fund"
 address = "0xeaeAEAeaEaeAEaEAeaeaeaeAeAeAeAEaeAEAeAeA"
-amount = "1500000000000000000000000"  # 1.5M tokens (15%)
+amount = "1500000"  # 1.5M tokens (15%)
 description = "Community initiatives and events"
 
 [distributions.test]
-# Test distribution for development/testing
+# Small test amounts for development and testing
 description = "Simple test distribution for development"
 
 [[distributions.test.recipients]]
 name = "Test Account 1"
 address = "0x1111111111111111111111111111111111111111"
-amount = "1000000000000000000000"  # 1000 tokens
+amount = "1000"  # 1000 tokens
 description = "Test recipient 1"
 
 [[distributions.test.recipients]]
 name = "Test Account 2"
 address = "0x2222222222222222222222222222222222222222"
-amount = "2000000000000000000000"  # 2000 tokens
+amount = "2000"  # 2000 tokens
 description = "Test recipient 2"
 
 [[distributions.test.recipients]]
 name = "Test Account 3"
 address = "0x3333333333333333333333333333333333333333"
-amount = "3000000000000000000000"  # 3000 tokens
+amount = "3000"  # 3000 tokens
 description = "Test recipient 3"
 
-# TokenSplitter configuration for different scenarios
+# Revenue splitter configurations for automated distribution
+# Select during deployment or set splitter_scenario = "none" to skip
+
 [splitter.default]
-# Default splitter configuration
+# Balanced operational revenue distribution
 description = "Standard dividend splitting configuration"
 
 # Payees with their share percentages (in basis points, 10000 = 100%)
@@ -157,7 +157,7 @@ account = "0x4444444444444444444444444444444444444444"
 shares = 1000  # 10% Operations
 
 [splitter.simple]
-# Simple two-way split
+# Equal partnership revenue sharing
 description = "Simple 50/50 split between two parties"
 
 [[splitter.simple.payees]]
@@ -169,7 +169,7 @@ account = "0x2222222222222222222222222222222222222222"
 shares = 5000  # 50% Partner B
 
 [splitter.revenue_share]
-# Revenue sharing configuration
+# Investor-focused revenue distribution model
 description = "Revenue sharing among stakeholders"
 
 [[splitter.revenue_share.payees]]
@@ -189,7 +189,7 @@ account = "0x4444444444444444444444444444444444444444"
 shares = 500   # 5% Reserve Fund
 
 [splitter.test]
-# Test splitter configuration
+# Simple test split for development
 description = "Test splitter for development"
 
 [[splitter.test.payees]]
@@ -215,15 +215,15 @@ block_time_milliseconds = 12000
 gas_price_gwei = 10
 gas_limit = 8000000
 
-# Deployment settings
+# Deployment settings (can be overridden by interactive selection)
 [deployment]
-# Which distribution scenario to use (default, startup, dao, test)
+# Default distribution scenario (shown as default in interactive mode)
 scenario = "default"
-# Which splitter configuration to use (default, simple, revenue_share, test, or "none" to skip splitter)
+# Default splitter scenario (use "none" to skip splitter deployment)
 splitter_scenario = "default"
 # Whether to verify contracts on Etherscan after deployment
 verify = true
-# Whether to save deployment artifacts
+# Whether to save deployment artifacts to deployments/ directory
 save_artifacts = true
 # Custom deployment salt (leave empty for auto-generated)
 custom_salt = ""

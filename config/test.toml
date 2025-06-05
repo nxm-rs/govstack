@@ -1,5 +1,6 @@
-# Simple Test Deployment Configuration
-# This file contains minimal parameters for quick testing of the deployment system
+# Test Configuration for Development
+# Minimal parameters with small amounts for testing and development
+# Use this config for local testing, testnets, or development workflows
 
 [token]
 name = "Test Governance Token"
@@ -12,11 +13,8 @@ name = "Test Governor"
 voting_delay_time = "5 minutes"        # Very short for testing
 voting_period_time = "2 hours"         # Short voting period for testing
 late_quorum_extension_time = "10 minutes"  # Short extension for testing
-quorum_numerator = 100   # 1% quorum for testing
-
-[treasury]
-# Treasury address for testing (has minting/burning privileges)
-address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+quorum_numerator = 1   # 1% quorum for testing
+proposal_threshold = 1   # 1 token needed to create proposal
 
 [distributions.test]
 description = "Simple test distribution"
@@ -24,19 +22,17 @@ description = "Simple test distribution"
 [[distributions.test.recipients]]
 name = "Test Account 1"
 address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-amount = "1000000000000000000000"  # 1000 tokens
+amount = "1000"  # 1000 tokens
 description = "Test recipient 1"
 
 [[distributions.test.recipients]]
 name = "Test Account 2"
 address = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-amount = "2000000000000000000000"  # 2000 tokens
+amount = "2000"  # 2000 tokens
 description = "Test recipient 2"
 
 [splitter.test]
 description = "Simple 50/50 test split"
-
-
 
 [[splitter.test.payees]]
 account = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"

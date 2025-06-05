@@ -3,6 +3,7 @@ pragma solidity ^0.8;
 
 import "./TestHelper.sol";
 import "../src/Deployer.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 
 /**
  * @title GovernanceIntegrationTest
@@ -22,8 +23,8 @@ import "../src/Deployer.sol";
  */
 contract GovernanceIntegrationTest is TestHelper {
     Token public token;
-    TokenGovernor public governor;
-    TokenSplitter public splitter;
+    Governor public governor;
+    Splitter public splitter;
 
     // Test addresses with predefined voting power distribution
     address public constant PROPOSER = address(0x10); // 10% voting power
@@ -67,18 +68,16 @@ contract GovernanceIntegrationTest is TestHelper {
 
         vm.recordLogs();
 
-        new TestableDeployer(
-            createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions, OWNER
-        );
+        new TestableDeployer(createBasicTokenConfig(), createBasicGovernorConfig(), emptySplitterConfig, distributions);
 
         // Extract deployed contract addresses from deployment logs
         Vm.Log[] memory logs = vm.getRecordedLogs();
         (address tokenAddress, address governorAddress, address splitterAddress,,) = extractDeploymentAddresses(logs);
 
         token = Token(tokenAddress);
-        governor = TokenGovernor(payable(governorAddress));
+        governor = Governor(payable(governorAddress));
         if (splitterAddress != address(0)) {
-            splitter = TokenSplitter(splitterAddress);
+            splitter = Splitter(splitterAddress);
         }
 
         // Critical: Delegate voting power to self for all token holders
@@ -375,7 +374,7 @@ contract GovernanceIntegrationTest is TestHelper {
         address smallHolder = address(0x99);
 
         // Give small holder only 50 tokens (below threshold of 1000)
-        vm.prank(OWNER);
+        vm.prank(address(governor));
         token.mint(smallHolder, 50e18);
 
         vm.prank(smallHolder);

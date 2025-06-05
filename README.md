@@ -7,8 +7,8 @@ A comprehensive Solidity-based governance system built with Foundry, featuring c
 This system provides a complete governance infrastructure consisting of three main contracts deployed atomically:
 
 1. **Token.sol** - ERC20 governance token with voting capabilities (ERC20Votes)
-2. **TokenGovernor.sol** - OpenZeppelin-based governor contract for DAO governance
-3. **TokenSplitter.sol** - Revenue/dividend distribution contract among stakeholders
+2. **Governor.sol** - OpenZeppelin-based governor contract for DAO governance
+3. **Splitter.sol** - Revenue/dividend distribution contract among stakeholders
 
 All contracts are deployed through a single `Deploy.s.sol` script that uses TOML configuration files for complete customization. The deployment system supports time-based governance parameters with millisecond precision for accurate cross-network deployment.
 
@@ -37,6 +37,21 @@ All contracts are deployed through a single `Deploy.s.sol` script that uses TOML
 - **Ethereum Mainnet** (12s blocks) - Primary deployment target
 - **Sepolia Testnet** (12s blocks) - For testing
 
+## Quick Deploy
+
+```bash
+# 1. Install and build
+forge install && forge build
+
+# 2. Configure deployment
+# Edit config/deployment.toml with your settings
+
+# 3. Deploy interactively
+./deploy.sh
+```
+
+The script guides you through selecting configuration files and scenarios, then prompts securely for your RPC URL, Etherscan API key, and private key.
+
 ## Quick Start
 
 ### 1. Install Dependencies
@@ -54,44 +69,28 @@ forge build
 forge test
 ```
 
-### 2. Basic Deployment
+### 2. Deployment Options
 
+**Interactive (Recommended)**
 ```bash
-# Deploy with default configuration to localhost
-forge script script/Deploy.s.sol:Deploy \
-  --rpc-url http://localhost:8545 \
-  --private-key $PRIVATE_KEY \
-  --broadcast
+./deploy.sh
+```
 
-# Deploy to mainnet
+**Direct Forge Script**
+```bash
+# Set environment variables
+export RPC_URL="your_rpc_url"
+export ETHERSCAN_API_KEY="your_api_key"
+
+# Deploy with interactive scenario selection
 forge script script/Deploy.s.sol:Deploy \
-  --rpc-url $MAINNET_RPC_URL \
-  --private-key $PRIVATE_KEY \
+  --sig "runInteractiveWithScenario()" \
+  --rpc-url $RPC_URL \
   --broadcast \
   --verify
 ```
 
-### 3. Custom Deployment
-
-```bash
-# Deploy with specific distribution scenario
-forge script script/Deploy.s.sol:Deploy \
-  --sig "runWithDistributionScenario(string)" "dao" \
-  --rpc-url $RPC_URL \
-  --private-key $PRIVATE_KEY \
-  --broadcast
-
-# Deploy without splitter
-forge script script/Deploy.s.sol:Deploy \
-  --sig "runWithoutSplitter(string)" "startup" \
-  --rpc-url $RPC_URL \
-  --private-key $PRIVATE_KEY \
-  --broadcast
-```
-
 ## Configuration
-
-### Main Configuration File
 
 Edit `config/deployment.toml` to customize your deployment:
 
@@ -103,114 +102,46 @@ initial_supply = 0
 
 [governor]
 name = "My DAO Governor"
-voting_delay_time = "2 days"      # Time before voting starts
-voting_period_time = "1 week"     # Duration of voting period
-late_quorum_extension_time = "6 hours"  # Extension if quorum reached late
-quorum_numerator = 500             # 5% quorum requirement
+voting_delay_time = "2 days"
+voting_period_time = "1 week"
+late_quorum_extension_time = "6 hours"
+quorum_numerator = 5  # 5% quorum
 
 [treasury]
-address = "0x1234567890123456789012345678901234567890"  # Treasury address with minting/burning privileges
+address = "0x1234567890123456789012345678901234567890"
 
 [deployment]
-scenario = "default"               # Distribution scenario to use
-splitter_scenario = "default"      # Splitter scenario (or "none")
-verify = true                      # Verify on Etherscan
-save_artifacts = true              # Save deployment info
+scenario = "default"          # Distribution scenario
+splitter_scenario = "default" # Revenue splitter scenario
+verify = true
+save_artifacts = true
 ```
 
-### Distribution Scenarios
+The interactive deployment will show available scenarios from your config files and let you select them dynamically. See the `config/` directory for example configurations and scenario definitions.
 
-Define token distribution among stakeholders:
-
-```toml
-[distributions.dao]
-description = "DAO-focused distribution"
-
-[[distributions.dao.recipients]]
-name = "DAO Treasury"
-address = "0x1111111111111111111111111111111111111111"
-amount = "5000000000000000000000000"  # 5M tokens (50%)
-description = "Main DAO treasury"
-
-[[distributions.dao.recipients]]
-name = "Core Contributors"
-address = "0x2222222222222222222222222222222222222222"
-amount = "2500000000000000000000000"  # 2.5M tokens (25%)
-description = "Core team allocation"
-
-# Add more recipients...
-```
-
-### Revenue Splitter Configuration
-
-Configure automated revenue distribution:
-
-```toml
-[splitter.default]
-description = "Revenue sharing among stakeholders"
-
-[[splitter.default.payees]]
-account = "0x1111111111111111111111111111111111111111"
-shares = 4000  # 40% to Treasury
-
-[[splitter.default.payees]]
-account = "0x2222222222222222222222222222222222222222"
-shares = 3000  # 30% to Development Fund
-
-# Total shares must equal 10000 (100%)
-```
-
-## Deployment for Mainnet
+## Deployment
 
 ### Prerequisites
 
-1. **Set Environment Variables**:
+1. **Configure**: Edit `config/deployment.toml` with your settings
+2. **API Keys**: Get RPC URL and Etherscan API key
+3. **Test First**: Deploy on Sepolia testnet before mainnet
+
+### Deploy to Mainnet
+
 ```bash
-export MAINNET_RPC_URL="https://mainnet.infura.io/v3/YOUR_KEY"
-export PRIVATE_KEY="0x..."
-export ETHERSCAN_API_KEY="YOUR_ETHERSCAN_KEY"
+# Interactive deployment (recommended)
+./deploy.sh
+
+# When prompted:
+# - RPC URL: https://eth.merkle.io
+# - Etherscan API key: YOUR_ETHERSCAN_KEY
+# - Select config/deployment.toml
+# - Choose your desired scenarios
+# - Enter private key securely
 ```
 
-2. **Configure Deployment**:
-   - Edit `config/deployment.toml`
-   - Set your treasury address
-   - Configure distribution recipients
-   - Set appropriate governance parameters
-
-3. **Test First**:
-```bash
-# Test on Sepolia first
-forge script script/Deploy.s.sol:Deploy \
-  --rpc-url $SEPOLIA_RPC_URL \
-  --private-key $PRIVATE_KEY \
-  --broadcast \
-  --verify
-```
-
-### Mainnet Deployment Steps
-
-1. **Preview Deployment**:
-```bash
-forge script script/Deploy.s.sol:Deploy \
-  --rpc-url $MAINNET_RPC_URL \
-  --private-key $PRIVATE_KEY
-# Do not add --broadcast flag for preview
-```
-
-2. **Execute Deployment**:
-```bash
-forge script script/Deploy.s.sol:Deploy \
-  --rpc-url $MAINNET_RPC_URL \
-  --private-key $PRIVATE_KEY \
-  --broadcast \
-  --verify \
-  --gas-estimate-multiplier 120
-```
-
-3. **Verify Deployment**:
-   - Check `deployments/` directory for deployment artifacts
-   - Verify contracts on Etherscan
-   - Test basic functionality (minting, proposals, voting)
+Deployment artifacts are saved to `deployments/` and contracts are automatically verified.
 
 ## Contract Interactions
 
@@ -252,7 +183,7 @@ governor.execute(targets, values, calldatas, descriptionHash);
 IGovernor.ProposalState state = governor.state(proposalId);
 ```
 
-### TokenSplitter Contract
+### Splitter Contract
 
 ```solidity
 // Split specific token among payees
@@ -270,22 +201,21 @@ address[] memory payees = splitter.getAllPayees();
 
 ## Built-in Scenarios
 
-### Distribution Scenarios
+The deployment system automatically discovers scenarios from your config files. The interactive deployment lists available options with descriptions and lets you select by number.
 
-| Scenario | Description | Use Case |
-|----------|-------------|----------|
-| `default` | Balanced governance (40% treasury, 25% contributors, 20% ecosystem, 15% community) | General DAO launches |
-| `startup` | Startup-focused (30% founders, 20% team, 25% investors, 25% public) | Early-stage projects |
-| `dao` | DAO-centric (50% treasury, 20% mining, 15% grants, 15% community) | Decentralized protocols |
-| `test` | Small amounts for testing | Development/testing |
+Example scenarios in `config/deployment.toml`:
+- **default** - Balanced governance distribution
+- **startup** - Startup-focused allocation
+- **dao** - DAO-centric distribution
+- **test** - Development testing
 
-### Splitter Scenarios
+For revenue splitting:
+- **default** - Balanced operations split
+- **simple** - 50/50 partnership split
+- **revenue_share** - Investor-focused distribution
+- **none** - Skip splitter deployment
 
-| Scenario | Description | Use Case |
-|----------|-------------|----------|
-| `default` | Balanced operations (40% treasury, 30% dev, 20% marketing, 10% ops) | Standard operations |
-| `simple` | 50/50 split | Partnerships |
-| `revenue_share` | Investor-focused (50% investors, 30% team, 15% advisors, 5% reserve) | Revenue distribution |
+Add new scenarios to config files and they automatically appear in the interactive selection.
 
 ## Testing
 
@@ -310,7 +240,7 @@ forge coverage
 
 ### Test Results
 
-- **87 total tests** across 5 test suites
+- **162 total tests** across 5 test suites
 - **100% pass rate**
 - **Comprehensive coverage** of all governance scenarios
 - **Time-based testing** with millisecond precision
@@ -351,6 +281,16 @@ forge coverage
 - **Atomic deployment** ensures all-or-nothing contract creation
 - **Comprehensive testing** with edge case coverage
 
+## :warning: Security Notes
+
+> **Warning**
+>
+> These contracts have **not been audited**. Use at your own risk.
+>
+> - The code is provided as-is and may contain bugs or vulnerabilities.
+> - Do not use in production or with mainnet funds unless you have performed your own thorough security review and/or audit.
+> - The Nexum Contributors and maintainers take no responsibility for any loss of funds or damages resulting from the use of this code.
+
 ## Deployment Artifacts
 
 After deployment, artifacts are saved to `deployments/chainId_timestamp.json`:
@@ -376,77 +316,24 @@ After deployment, artifacts are saved to `deployments/chainId_timestamp.json`:
 ## Gas Costs
 
 Typical gas costs on Ethereum mainnet:
-
-| Operation | Gas Cost |
-|-----------|----------|
-| Full Deployment | ~5.2M gas |
-| Token Deployment | ~1.2M gas |
-| Governor Deployment | ~2.3M gas |
-| Splitter Deployment | ~1.7M gas |
-| Create Proposal | ~250K gas |
-| Cast Vote | ~80K gas |
-| Execute Proposal | Varies by proposal |
+- Full Deployment: ~5.2M gas
+- Create Proposal: ~250K gas
+- Cast Vote: ~80K gas
 
 ## Troubleshooting
 
-### Common Issues
+**Common Issues:**
+- **Gas Failed**: Ensure sufficient ETH balance and reasonable gas limits
+- **Invalid Config**: Check addresses and amounts in config files
+- **Verification Failed**: Verify Etherscan API key and network support
 
-1. **Gas Estimation Failed**
-   - Increase gas limit in network config
-   - Ensure sufficient ETH balance
-   - Check network congestion
-
-2. **Invalid Distribution**
-   - Verify all recipient addresses are valid
-   - Check distribution amounts are reasonable
-   - Ensure no duplicate recipients
-
-3. **Deployment Verification Failed**
-   - Check Etherscan API key is set
-   - Verify network is supported by Etherscan
-   - Wait for block confirmation before verification
-
-4. **Time Conversion Errors**
-   - Verify network block times in config
-   - Check time format strings (e.g., "1 day", "2 hours")
-   - Ensure realistic governance periods
-
-### Debug Commands
-
+**Debug Commands:**
 ```bash
-# Preview deployment without broadcasting
+# Preview without broadcasting
 forge script script/Deploy.s.sol:Deploy
 
-# Verbose logging
+# Verbose output
 forge script script/Deploy.s.sol:Deploy -vvv
-
-# Estimate gas
-forge script script/Deploy.s.sol:Deploy --estimate-gas
-
-# Dry run with fork
-forge script script/Deploy.s.sol:Deploy \
-  --fork-url $MAINNET_RPC_URL
-```
-
-## Advanced Usage
-
-### Custom Configuration Files
-
-Create custom TOML files for different deployment scenarios:
-
-```bash
-# Copy default config
-cp config/deployment.toml config/my-dao.toml
-
-# Edit parameters
-vim config/my-dao.toml
-
-# Deploy with custom config
-forge script script/Deploy.s.sol:Deploy \
-  --sig "runWithCustomConfig(string)" "config/my-dao.toml" \
-  --rpc-url $RPC_URL \
-  --private-key $PRIVATE_KEY \
-  --broadcast
 ```
 
 
@@ -480,25 +367,18 @@ forge fmt
 
 ## License
 
-AGPL-3.0-or-later
+This project is licensed under the AGPL-3.0-or-later license.
+See the [LICENCE](./LICENCE) file for the full license text.
 
 ## Support
 
 For questions, issues, or feature requests:
 - Open an issue in the repository
-- Check existing documentation in the `README_*.md` files
 - Review test files for usage examples
 - Contact the development team
 
 ---
 
-## Migration Guide
+## Forwarder System
 
-If migrating from the previous token-only system:
-
-1. **Update Configuration**: Convert hardcoded parameters to TOML format
-2. **Test Deployment**: Deploy to testnet first with new system
-3. **Verify Governance**: Test proposal creation, voting, and execution
-4. **Update Scripts**: Modify any existing deployment scripts
-
-This governance stack provides a complete foundation for decentralized organizations with professional-grade deployment tools and comprehensive testing coverage.
+For details on the deterministic token forwarding system and cross-chain bridging, see [src/forwarders/README.md](src/forwarders/README.md).

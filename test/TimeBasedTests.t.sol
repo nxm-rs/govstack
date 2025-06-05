@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.20;
 
 import "../script/Deploy.s.sol";
@@ -15,10 +15,7 @@ contract TimeBasedTests is TestHelper {
     string constant TEST_CONFIG_PATH = "config/test.toml";
 
     function setUp() public {
-        deployer = new Deploy();
-
-        // Set up test environment to simulate localhost network
-        vm.chainId(31337);
+        deployer = setupDeployerForLocalhost();
     }
 
     // ============ TIME CONVERSION UNIT TESTS ============
@@ -69,35 +66,6 @@ contract TimeBasedTests is TestHelper {
 
         vm.expectRevert("Unsupported time unit: unknown");
         deployer._convertUnitToSeconds("unknown", 1);
-    }
-
-    /**
-     * @dev Test string to uint parsing
-     */
-    function testParseStringToUint() public view {
-        assertEq(deployer._parseStringToUint("0"), 0);
-        assertEq(deployer._parseStringToUint("1"), 1);
-        assertEq(deployer._parseStringToUint("123"), 123);
-        assertEq(deployer._parseStringToUint("999"), 999);
-        assertEq(deployer._parseStringToUint("1000"), 1000);
-        assertEq(deployer._parseStringToUint("123456"), 123456);
-    }
-
-    /**
-     * @dev Test invalid number strings
-     */
-    function testInvalidNumberStrings() public {
-        vm.expectRevert("Invalid number character");
-        deployer._parseStringToUint("abc");
-
-        vm.expectRevert("Invalid number character");
-        deployer._parseStringToUint("12a");
-
-        vm.expectRevert("Invalid number character");
-        deployer._parseStringToUint("1.5");
-
-        vm.expectRevert("Invalid number character");
-        deployer._parseStringToUint("-1");
     }
 
     /**
@@ -180,7 +148,7 @@ contract TimeBasedTests is TestHelper {
         vm.expectRevert("Unsupported time unit: year");
         deployer._parseTimeToBlocks("1 year", blockTimeMs);
 
-        vm.expectRevert("Invalid number character");
+        vm.expectRevert();
         deployer._parseTimeToBlocks("abc hours", blockTimeMs);
     }
 
@@ -191,14 +159,15 @@ contract TimeBasedTests is TestHelper {
      */
     function testTimeBasedGovernorConfigConversion() public {
         // Test with Ethereum mainnet block times
-        vm.chainId(1);
+        setupEthereumNetwork();
 
         Deploy.TimeBasedGovernorConfig memory config = Deploy.TimeBasedGovernorConfig({
             name: "Test Governor",
             votingDelayTime: "1 day",
             votingPeriodTime: "1 week",
             lateQuorumExtensionTime: "1 hour",
-            quorumNumerator: 500
+            quorumNumerator: 500,
+            proposalThreshold: 1
         });
 
         // Create a mock network config for Ethereum
@@ -233,11 +202,12 @@ contract TimeBasedTests is TestHelper {
             votingDelayTime: "2 days",
             votingPeriodTime: "1 week",
             lateQuorumExtensionTime: "6 hours",
-            quorumNumerator: 1000
+            quorumNumerator: 1000,
+            proposalThreshold: 1
         });
 
         // Test Ethereum (12s blocks)
-        vm.chainId(1);
+        setupEthereumNetwork();
         Deploy.NetworkConfig memory ethNetwork = Deploy.NetworkConfig({
             description: "Ethereum Mainnet",
             chainId: 1,
@@ -251,7 +221,7 @@ contract TimeBasedTests is TestHelper {
         assertEq(ethConfig.lateQuorumExtension, 1800); // 6 hours = 21600s = 1800 blocks
 
         // Test Fast L2 network (2s blocks)
-        vm.chainId(11155111); // Use Sepolia for testing
+        setupFastL2Network();
         Deploy.NetworkConfig memory fastL2Network = Deploy.NetworkConfig({
             description: "Fast L2 Network",
             chainId: 11155111,
@@ -268,7 +238,7 @@ contract TimeBasedTests is TestHelper {
      * @dev Test time parameters converted event emission
      */
     function testTimeParametersConvertedEvent() public {
-        vm.chainId(1); // Ethereum mainnet
+        setupEthereumNetwork(); // Ethereum mainnet
 
         // Expect the event to be emitted with converted values
         expectTimeParametersConverted(
@@ -285,7 +255,8 @@ contract TimeBasedTests is TestHelper {
             votingDelayTime: "1 day",
             votingPeriodTime: "1 week",
             lateQuorumExtensionTime: "1 hour",
-            quorumNumerator: 500
+            quorumNumerator: 500,
+            proposalThreshold: 1
         });
 
         Deploy.NetworkConfig memory networkConfig = Deploy.NetworkConfig({

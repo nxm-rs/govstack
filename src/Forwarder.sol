@@ -6,6 +6,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 
 /// @title Forwarder
+/// @author Nexum Contributors
 /// @notice Abstract contract for forwarding tokens from L2 to mainnet through bridges
 /// @dev This contract is designed to be deterministically deployed to the same address
 ///      on any L2 chain when forwarding to the same mainnet address
@@ -124,14 +125,27 @@ abstract contract Forwarder {
         }
     }
 
-    /// @notice Get the balance of a specific token
-    /// @param token The token address (use address(0) for native token)
-    /// @return The balance of the token
-    function getBalance(address token) external view returns (uint256) {
+    /// @notice Emergency function to recover tokens if bridge fails
+    /// @dev Only callable by the mainnet recipient (acts as admin)
+    /// @param token The token to recover
+    /// @param to The address to send recovered tokens to
+    function emergencyRecover(address token, address to) external onlyInitialized {
+        require(msg.sender == mainnetRecipient, "Only recipient can recover");
+        require(to != address(0), "Invalid recovery address");
+
         if (token == address(0)) {
-            return address(this).balance;
+            // Recover native tokens
+            uint256 balance = address(this).balance;
+            if (balance > 0) {
+                to.safeTransferETH(balance);
+            }
+        } else {
+            // Recover ERC20 tokens
+            uint256 balance = ERC20(token).balanceOf(address(this));
+            if (balance > 0) {
+                token.safeTransfer(to, balance);
+            }
         }
-        return ERC20(token).balanceOf(address(this));
     }
 
     /// @notice Abstract function to bridge ERC20 tokens to mainnet

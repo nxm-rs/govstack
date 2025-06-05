@@ -1,9 +1,9 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
 import "../src/Forwarder.sol";
-import "../src/forwarders/gnosis/GnosisChainForwarderFactory.sol";
+import "../src/forwarders/gnosis/GnosisForwarderFactory.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
 /// @title TestERC20
@@ -62,7 +62,7 @@ contract TestForwarder is Forwarder {
 /// @title ForwarderTest
 /// @notice Test suite for Forwarder contracts
 contract ForwarderTest is Test {
-    GnosisChainForwarderFactory factory;
+    GnosisForwarderFactory factory;
     TestERC20 testToken;
     address mainnetRecipient;
     address user;
@@ -73,7 +73,7 @@ contract ForwarderTest is Test {
     event NativeForwarded(uint256 amount, address indexed recipient);
 
     function setUp() public {
-        // Set chain ID to Gnosis Chain since factory deploys GnosisChainForwarder
+        // Set chain ID to Gnosis Chain since factory deploys GnosisForwarder
         vm.chainId(100);
 
         // Create test addresses
@@ -82,7 +82,7 @@ contract ForwarderTest is Test {
         mockBridge = 0x1234567890123456789012345678901234567890;
 
         // Deploy factory (which deploys its own implementation)
-        factory = new GnosisChainForwarderFactory();
+        factory = new GnosisForwarderFactory();
 
         // Deploy test token
         testToken = new TestERC20("Test Token", "TEST");
@@ -303,19 +303,6 @@ contract ForwarderTest is Test {
         forwarder.batchForwardTokens(tokens);
     }
 
-    function testGetBalance() public {
-        TestForwarder forwarder = new TestForwarder();
-        forwarder.initialize(mainnetRecipient);
-
-        // Test ERC20 balance
-        deal(address(testToken), address(forwarder), 1000e18);
-        assertEq(forwarder.getBalance(address(testToken)), 1000e18);
-
-        // Test native balance
-        vm.deal(address(forwarder), 1 ether);
-        assertEq(forwarder.getBalance(address(0)), 1 ether);
-    }
-
     function testUninitializedForwarderFails() public {
         TestForwarder uninitializedForwarder = new TestForwarder();
 
@@ -364,7 +351,7 @@ contract ForwarderTest is Test {
         address payable forwarder1 = factory.deployForwarder(mainnetRecipient);
 
         // Create new factory (simulating deployment on different chain)
-        GnosisChainForwarderFactory factory2 = new GnosisChainForwarderFactory();
+        GnosisForwarderFactory factory2 = new GnosisForwarderFactory();
 
         // Predict address from both factories
         address predicted1 = factory.predictForwarderAddress(mainnetRecipient);
@@ -422,11 +409,11 @@ contract ForwarderTest is Test {
     }
 }
 
-/// @title GnosisChainForwarderTest
-/// @notice Test suite specifically for GnosisChainForwarder
-contract GnosisChainForwarderTest is Test {
-    GnosisChainForwarderFactory factory;
-    GnosisChainForwarder forwarder;
+/// @title GnosisForwarderTest
+/// @notice Test suite specifically for GnosisForwarder
+contract GnosisForwarderTest is Test {
+    GnosisForwarderFactory factory;
+    GnosisForwarder forwarder;
     TestERC20 testToken;
     address mainnetRecipient = vm.addr(1);
 
@@ -435,11 +422,11 @@ contract GnosisChainForwarderTest is Test {
         vm.chainId(100);
 
         // Deploy factory (which deploys its own implementation)
-        factory = new GnosisChainForwarderFactory();
+        factory = new GnosisForwarderFactory();
 
         // Deploy forwarder instance
         address payable forwarderAddr = factory.deployForwarder(mainnetRecipient);
-        forwarder = GnosisChainForwarder(forwarderAddr);
+        forwarder = GnosisForwarder(forwarderAddr);
 
         // Deploy test token
         testToken = new TestERC20("Test Token", "TEST");
@@ -457,7 +444,7 @@ contract GnosisChainForwarderTest is Test {
         // Change to wrong chain
         vm.chainId(1);
 
-        GnosisChainForwarder newForwarder = new GnosisChainForwarder();
+        GnosisForwarder newForwarder = new GnosisForwarder();
         vm.expectRevert(Forwarder.InvalidChain.selector);
         newForwarder.initialize(mainnetRecipient);
     }

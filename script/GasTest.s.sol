@@ -59,7 +59,8 @@ contract GasTest is Script {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: 1
         });
 
         // Create token distributions
@@ -78,7 +79,7 @@ contract GasTest is Script {
         vm.startBroadcast();
 
         // Deploy contracts
-        new Deployer(tokenConfig, governorConfig, emptySplitterConfig, distributions, OWNER);
+        new Deployer(tokenConfig, governorConfig, emptySplitterConfig, distributions);
 
         vm.stopBroadcast();
 
@@ -120,7 +121,8 @@ contract GasTest is Script {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: 1
         });
 
         // Create token distributions
@@ -147,7 +149,7 @@ contract GasTest is Script {
         vm.startBroadcast();
 
         // Deploy contracts
-        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions, OWNER);
+        new Deployer(tokenConfig, governorConfig, splitterConfig, distributions);
 
         vm.stopBroadcast();
 
@@ -204,12 +206,12 @@ contract GasTest is Script {
         require(governorAddress != address(0), "Governor address is zero");
 
         Token token = Token(tokenAddress);
-        TokenGovernor governor = TokenGovernor(payable(governorAddress));
+        Governor governor = Governor(payable(governorAddress));
 
         // Verify token properties
         require(keccak256(bytes(token.name())) == keccak256(bytes(TOKEN_NAME)), "Token name mismatch");
         require(keccak256(bytes(token.symbol())) == keccak256(bytes(TOKEN_SYMBOL)), "Token symbol mismatch");
-        require(token.owner() == OWNER, "Token owner mismatch");
+        require(token.owner() == governorAddress, "Token owner should be Governor");
 
         // Verify governor properties
         require(keccak256(bytes(governor.name())) == keccak256(bytes(GOVERNOR_NAME)), "Governor name mismatch");
@@ -242,13 +244,13 @@ contract GasTest is Script {
         require(splitterAddress != address(0), "Splitter address is zero");
 
         Token token = Token(tokenAddress);
-        TokenGovernor governor = TokenGovernor(payable(governorAddress));
-        TokenSplitter splitter = TokenSplitter(splitterAddress);
+        Governor governor = Governor(payable(governorAddress));
+        Splitter splitter = Splitter(splitterAddress);
 
         // Verify token properties
         require(keccak256(bytes(token.name())) == keccak256(bytes(TOKEN_NAME)), "Token name mismatch");
         require(keccak256(bytes(token.symbol())) == keccak256(bytes(TOKEN_SYMBOL)), "Token symbol mismatch");
-        require(token.owner() == OWNER, "Token owner mismatch");
+        require(token.owner() == governorAddress, "Token owner should be Governor");
 
         // Verify governor properties
         require(keccak256(bytes(governor.name())) == keccak256(bytes(GOVERNOR_NAME)), "Governor name mismatch");
@@ -281,7 +283,8 @@ contract GasTest is Script {
             votingDelay: VOTING_DELAY,
             votingPeriod: VOTING_PERIOD,
             quorumNumerator: QUORUM_NUMERATOR,
-            lateQuorumExtension: LATE_QUORUM_EXTENSION
+            lateQuorumExtension: LATE_QUORUM_EXTENSION,
+            proposalThreshold: 1
         });
 
         // Create many token distributions (10 recipients)
@@ -301,7 +304,7 @@ contract GasTest is Script {
 
         vm.startBroadcast();
 
-        new Deployer(tokenConfig, governorConfig, emptySplitterConfig, distributions, OWNER);
+        new Deployer(tokenConfig, governorConfig, emptySplitterConfig, distributions);
 
         vm.stopBroadcast();
 

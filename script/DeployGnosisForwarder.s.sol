@@ -1,12 +1,12 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.30;
 
 import "forge-std/Script.sol";
-import "../src/forwarders/gnosis/GnosisChainForwarder.sol";
-import "../src/forwarders/gnosis/GnosisChainForwarderFactory.sol";
+import "../src/forwarders/gnosis/GnosisForwarder.sol";
+import "../src/forwarders/gnosis/GnosisForwarderFactory.sol";
 
 /// @title DeployGnosisForwarder
-/// @notice Deployment script for GnosisChainForwarder on Gnosis Chain using LibClone
+/// @notice Deployment script for GnosisForwarder on Gnosis Chain using LibClone
 contract DeployGnosisForwarder is Script {
     /// @notice The expected Gnosis Chain ID
     uint256 constant GNOSIS_CHAIN_ID = 100;
@@ -29,12 +29,12 @@ contract DeployGnosisForwarder is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy the factory contract (which will deploy its own implementation)
-        GnosisChainForwarderFactory factory = new GnosisChainForwarderFactory();
+        GnosisForwarderFactory factory = new GnosisForwarderFactory();
         console.log("ForwarderFactory deployed at:", address(factory));
 
         // Get the implementation address that was deployed by the factory
         address implementation = factory.getImplementation();
-        console.log("GnosisChainForwarder implementation deployed at:", implementation);
+        console.log("GnosisForwarder implementation deployed at:", implementation);
 
         vm.stopBroadcast();
 
@@ -57,7 +57,7 @@ contract DeployGnosisForwarder is Script {
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        GnosisChainForwarderFactory factory = GnosisChainForwarderFactory(factoryAddress);
+        GnosisForwarderFactory factory = GnosisForwarderFactory(factoryAddress);
         address implementationAddress = factory.getImplementation();
 
         console.log("Deploying forwarder instance...");
@@ -96,7 +96,7 @@ contract DeployGnosisForwarder is Script {
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        GnosisChainForwarderFactory factory = GnosisChainForwarderFactory(factoryAddress);
+        GnosisForwarderFactory factory = GnosisForwarderFactory(factoryAddress);
         address implementationAddress = factory.getImplementation();
 
         console.log("Deploying multiple forwarder instances...");
@@ -113,7 +113,8 @@ contract DeployGnosisForwarder is Script {
             console.log("Deploying forwarder for recipient:", recipient);
 
             // Check if already deployed
-            if (factory.forwarderExists(recipient)) {
+            address predictedAddress = factory.predictForwarderAddress(recipient);
+            if (predictedAddress.code.length > 0) {
                 console.log("Forwarder already exists for recipient:", recipient);
                 continue;
             }
@@ -134,7 +135,7 @@ contract DeployGnosisForwarder is Script {
         try vm.envAddress("GNOSIS_FORWARDER_FACTORY") returns (address fact) {
             factory = fact;
             if (factory != address(0)) {
-                implementation = GnosisChainForwarderFactory(factory).getImplementation();
+                implementation = GnosisForwarderFactory(factory).getImplementation();
             }
         } catch {
             console.log("GNOSIS_FORWARDER_FACTORY not set");
@@ -148,12 +149,12 @@ contract DeployGnosisForwarder is Script {
         console.log("Verifying deployment...");
 
         // Verify factory
-        GnosisChainForwarderFactory factory = GnosisChainForwarderFactory(factoryAddress);
+        GnosisForwarderFactory factory = GnosisForwarderFactory(factoryAddress);
         address implementationAddress = factory.getImplementation();
         require(implementationAddress != address(0), "No implementation found");
 
         // Verify implementation
-        GnosisChainForwarder impl = GnosisChainForwarder(payable(implementationAddress));
+        GnosisForwarder impl = GnosisForwarder(payable(implementationAddress));
         require(block.chainid == GNOSIS_CHAIN_ID, "Wrong chain for implementation");
         require(
             address(impl.OMNIBRIDGE()) != address(0) && address(impl.XDAI_BRIDGE()) != address(0),
