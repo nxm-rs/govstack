@@ -66,7 +66,7 @@ abstract contract ForwarderFactory {
 
         /// Check if forwarder already exists by checking if it has code
         if (forwarder.code.length == 0) {
-            forwarder = this.deployForwarder(mainnetRecipient);
+            forwarder = deployForwarder(mainnetRecipient);
         }
     }
 
@@ -82,7 +82,7 @@ abstract contract ForwarderFactory {
         forwarderAddresses = new address payable[](mainnetRecipients.length);
 
         for (uint256 i = 0; i < mainnetRecipients.length; i++) {
-            forwarderAddresses[i] = this.deployForwarder(mainnetRecipients[i]);
+            forwarderAddresses[i] = deployForwarder(mainnetRecipients[i]);
         }
     }
 
