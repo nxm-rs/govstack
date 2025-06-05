@@ -29,11 +29,6 @@ interface IForwarder {
     /// @param tokens Array of token addresses to forward
     function batchForwardTokens(address[] calldata tokens) external;
 
-    /// @notice Get the balance of a specific token
-    /// @param token The token address (use address(0) for native token)
-    /// @return The balance of the token
-    function getBalance(address token) external view returns (uint256);
-
     /// @notice Get the mainnet recipient address
     /// @return The mainnet recipient address
     function mainnetRecipient() external view returns (address);

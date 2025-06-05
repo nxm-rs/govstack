@@ -64,7 +64,7 @@ contract GnosisForwarderForkTest is Test {
         factory = new GnosisForwarderFactory();
 
         // Deploy forwarder instance
-        address payable forwarderAddr = factory.deployForwarder(mainnetRecipient);
+        address payable forwarderAddr = factory.deployForwarder(mainnetRecipient, bytes32(0));
         forwarder = GnosisForwarder(forwarderAddr);
 
         // Fund user account
@@ -195,13 +195,13 @@ contract GnosisForwarderForkTest is Test {
         address recipient2 = vm.addr(11);
 
         // Predict and deploy first forwarder
-        address predicted1 = factory.predictForwarderAddress(recipient1);
-        address forwarder1 = factory.deployForwarder(recipient1);
+        address predicted1 = factory.predictForwarderAddress(recipient1, bytes32(0));
+        address forwarder1 = factory.deployForwarder(recipient1, bytes32(0));
         assertEq(predicted1, forwarder1);
 
         // Predict and deploy second forwarder
-        address predicted2 = factory.predictForwarderAddress(recipient2);
-        address forwarder2 = factory.deployForwarder(recipient2);
+        address predicted2 = factory.predictForwarderAddress(recipient2, bytes32(0));
+        address forwarder2 = factory.deployForwarder(recipient2, bytes32(0));
         assertEq(predicted2, forwarder2);
 
         // Addresses should be different
@@ -212,7 +212,7 @@ contract GnosisForwarderForkTest is Test {
         assertEq(GnosisForwarder(payable(forwarder2)).mainnetRecipient(), recipient2);
 
         // Duplicate deployment returns the same address
-        address forwarder1Dup = factory.getOrDeployForwarder(recipient1);
+        address forwarder1Dup = factory.getOrDeployForwarder(recipient1, bytes32(0));
         assertEq(forwarder1, forwarder1Dup);
 
         // Batch deploy
@@ -222,8 +222,8 @@ contract GnosisForwarderForkTest is Test {
         recipients[2] = vm.addr(42);
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            address predicted = factory.predictForwarderAddress(recipients[i]);
-            address deployed = factory.deployForwarder(recipients[i]);
+            address predicted = factory.predictForwarderAddress(recipients[i], bytes32(0));
+            address deployed = factory.deployForwarder(recipients[i], bytes32(0));
             assertEq(predicted, deployed);
 
             GnosisForwarder fw = GnosisForwarder(payable(deployed));
